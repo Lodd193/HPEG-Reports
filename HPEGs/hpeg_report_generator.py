@@ -1676,34 +1676,34 @@ def create_slide_12month_cdg_trends(prs, hpeg_name, trends_12month, hpeg_cdgs, m
             box_color = NHS_COLORS_RGB['nhs_orange']  # Orange instead of red (moderate)
             bg_color = RGBColor(255, 255, 255)  # White background
 
-        # Create colored box (LARGER SIZE, THICKER BORDER)
+        # Create colored box (FIT TO PAGE)
         box = slide.shapes.add_shape(
             MSO_SHAPE.ROUNDED_RECTANGLE,
             Inches(0.8), Inches(y_pos),
-            Inches(11.7), Inches(1.35)  # Increased from 1.05 to 1.35
+            Inches(11.7), Inches(0.95)  # Sized to fit 5 boxes on page
         )
         box.fill.solid()
         box.fill.fore_color.rgb = bg_color
         box.line.color.rgb = RGBColor(*box_color)
-        box.line.width = Pt(3)  # Increased from 2 to 3
+        box.line.width = Pt(3)
 
         text_frame = box.text_frame
-        text_frame.margin_left = Inches(0.2)  # Increased margin
-        text_frame.margin_top = Inches(0.12)  # Increased margin
+        text_frame.margin_left = Inches(0.15)
+        text_frame.margin_top = Inches(0.08)
         text_frame.word_wrap = True
 
         # CDG name (bold, LARGER TEXT)
         p = text_frame.paragraphs[0]
         run = p.add_run()
         run.text = f"{idx+1}. {insight['cdg'][:50]}\n"
-        run.font.size = Pt(15)  # Increased from 11 to 15
+        run.font.size = Pt(14)  # Readable but fits
         run.font.bold = True
         run.font.color.rgb = RGBColor(*box_color)
 
         # Current period median (LARGER TEXT)
         run = p.add_run()
         run.text = f"Current period median: {insight['current_median']:.1f} days • 12-month rolling median: {insight['rolling_median']:.1f} days\n"
-        run.font.size = Pt(13)  # Increased from 10 to 13
+        run.font.size = Pt(12)  # Readable but fits
         run.font.color.rgb = RGBColor(*NHS_COLORS_RGB['nhs_black'])
 
         # Trend comparison (LARGER TEXT)
@@ -1715,10 +1715,10 @@ def create_slide_12month_cdg_trends(prs, hpeg_name, trends_12month, hpeg_cdgs, m
         else:
             trend_text = "Stable: matching 12-month average"
         run.text = f"{trend_text} • {insight['performance']}"
-        run.font.size = Pt(11)  # Increased from 9 to 11
+        run.font.size = Pt(10)  # Readable but fits
         run.font.color.rgb = RGBColor(*NHS_COLORS_RGB['nhs_mid_grey'])
 
-        y_pos += 1.4  # Increased spacing from 1.15 to 1.4
+        y_pos += 1.05  # Box height + gap to fit on page
 
     # Summary text at bottom (LARGER TEXT)
     if len(insights) > 5:
@@ -1845,34 +1845,34 @@ def create_slide_12month_specialty_trends(prs, hpeg_name, trends_12month, hpeg_s
             box_color = NHS_COLORS_RGB['nhs_orange']  # Orange instead of red (moderate)
             bg_color = RGBColor(255, 255, 255)  # White background
 
-        # Create colored box (LARGER SIZE, THICKER BORDER)
+        # Create colored box (FIT TO PAGE)
         box = slide.shapes.add_shape(
             MSO_SHAPE.ROUNDED_RECTANGLE,
             Inches(0.8), Inches(y_pos),
-            Inches(11.7), Inches(1.35)  # Increased from 1.05 to 1.35
+            Inches(11.7), Inches(0.95)  # Sized to fit 5 boxes on page
         )
         box.fill.solid()
         box.fill.fore_color.rgb = bg_color
         box.line.color.rgb = RGBColor(*box_color)
-        box.line.width = Pt(3)  # Increased from 2 to 3
+        box.line.width = Pt(3)
 
         text_frame = box.text_frame
-        text_frame.margin_left = Inches(0.2)  # Increased margin
-        text_frame.margin_top = Inches(0.12)  # Increased margin
+        text_frame.margin_left = Inches(0.15)
+        text_frame.margin_top = Inches(0.08)
         text_frame.word_wrap = True
 
         # Specialty name (bold, LARGER TEXT)
         p = text_frame.paragraphs[0]
         run = p.add_run()
         run.text = f"{idx+1}. {insight['specialty'][:50]}\n"
-        run.font.size = Pt(15)  # Increased from 11 to 15
+        run.font.size = Pt(14)  # Readable but fits
         run.font.bold = True
         run.font.color.rgb = RGBColor(*box_color)
 
         # Current period median (LARGER TEXT)
         run = p.add_run()
         run.text = f"Current period median: {insight['current_median']:.1f} days • 12-month rolling median: {insight['rolling_median']:.1f} days\n"
-        run.font.size = Pt(13)  # Increased from 10 to 13
+        run.font.size = Pt(12)  # Readable but fits
         run.font.color.rgb = RGBColor(*NHS_COLORS_RGB['nhs_black'])
 
         # Trend comparison (LARGER TEXT)
@@ -1884,10 +1884,10 @@ def create_slide_12month_specialty_trends(prs, hpeg_name, trends_12month, hpeg_s
         else:
             trend_text = "Stable: matching 12-month average"
         run.text = f"{trend_text} • {insight['performance']}"
-        run.font.size = Pt(11)  # Increased from 9 to 11
+        run.font.size = Pt(10)  # Readable but fits
         run.font.color.rgb = RGBColor(*NHS_COLORS_RGB['nhs_mid_grey'])
 
-        y_pos += 1.4  # Increased spacing from 1.15 to 1.4
+        y_pos += 1.05  # Box height + gap to fit on page
 
     # Summary text at bottom (LARGER TEXT)
     if len(insights) > 5:
