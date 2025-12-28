@@ -1665,16 +1665,16 @@ def create_slide_12month_cdg_trends(prs, hpeg_name, trends_12month, hpeg_cdgs, m
 
     # Show top 5 CDGs
     for idx, insight in enumerate(insights[:5]):
-        # Determine color based on performance (NHS-COMPLIANT: white bg, colored border)
+        # Determine color based on performance
         if insight['current_median'] <= 40:
             box_color = NHS_COLORS_RGB['nhs_green']
-            bg_color = RGBColor(255, 255, 255)  # White background (dominant)
+            bg_color = RGBColor(240, 252, 240)  # Very light green tint
         elif insight['current_median'] <= 65:
             box_color = NHS_COLORS_RGB['nhs_warm_yellow']
-            bg_color = RGBColor(255, 255, 255)  # White background
+            bg_color = RGBColor(255, 253, 240)  # Very light yellow tint
         else:
-            box_color = NHS_COLORS_RGB['nhs_orange']  # Orange instead of red (moderate)
-            bg_color = RGBColor(255, 255, 255)  # White background
+            box_color = NHS_COLORS_RGB['nhs_dark_red']  # Consistent with other slides
+            bg_color = RGBColor(255, 245, 245)  # Very light red tint
 
         # Create colored box (FIT TO PAGE)
         box = slide.shapes.add_shape(
@@ -1834,16 +1834,16 @@ def create_slide_12month_specialty_trends(prs, hpeg_name, trends_12month, hpeg_s
 
     # Show top 5 specialties
     for idx, insight in enumerate(insights[:5]):
-        # Determine color based on performance (NHS-COMPLIANT: white bg, colored border)
+        # Determine color based on performance
         if insight['current_median'] <= 40:
             box_color = NHS_COLORS_RGB['nhs_green']
-            bg_color = RGBColor(255, 255, 255)  # White background (dominant)
+            bg_color = RGBColor(240, 252, 240)  # Very light green tint
         elif insight['current_median'] <= 65:
             box_color = NHS_COLORS_RGB['nhs_warm_yellow']
-            bg_color = RGBColor(255, 255, 255)  # White background
+            bg_color = RGBColor(255, 253, 240)  # Very light yellow tint
         else:
-            box_color = NHS_COLORS_RGB['nhs_orange']  # Orange instead of red (moderate)
-            bg_color = RGBColor(255, 255, 255)  # White background
+            box_color = NHS_COLORS_RGB['nhs_dark_red']  # Consistent with other slides
+            bg_color = RGBColor(255, 245, 245)  # Very light red tint
 
         # Create colored box (FIT TO PAGE)
         box = slide.shapes.add_shape(
@@ -1930,7 +1930,7 @@ def create_slide_resolution_complexity_distribution(prs, hpeg_name, metrics, tem
         complexities = ['Basic', 'Regular', 'Complex']
         targets = [25, 40, 65]
         colors = [NHS_COLORS_RGB['nhs_green'], NHS_COLORS_RGB['nhs_warm_yellow'],
-                  NHS_COLORS_RGB['nhs_orange']]  # Orange instead of red (NHS-compliant)
+                  NHS_COLORS_RGB['nhs_dark_red']]  # Consistent with other slides
 
         box_width = 3.7
         box_height = 1.5
@@ -1946,17 +1946,23 @@ def create_slide_resolution_complexity_distribution(prs, hpeg_name, metrics, tem
 
                 x_pos = start_x + (idx * (box_width + spacing))
 
-                # Create colored box (NHS-COMPLIANT: white bg, colored border)
+                # Create colored box with subtle tint
                 box = slide.shapes.add_shape(
                     MSO_SHAPE.ROUNDED_RECTANGLE,
                     Inches(x_pos), Inches(y_pos),
                     Inches(box_width), Inches(box_height)
                 )
                 box.fill.solid()
-                box.fill.fore_color.rgb = RGBColor(255, 255, 255)  # White background (dominant)
+                # Light tinted backgrounds matching slides 8 & 9
+                if idx == 0:
+                    box.fill.fore_color.rgb = RGBColor(240, 252, 240)  # Light green
+                elif idx == 1:
+                    box.fill.fore_color.rgb = RGBColor(255, 253, 240)  # Light yellow
+                else:
+                    box.fill.fore_color.rgb = RGBColor(255, 245, 245)  # Light red
 
                 box.line.color.rgb = RGBColor(*color)
-                box.line.width = Pt(3)  # Increased from 2.5 to 3
+                box.line.width = Pt(3)
 
                 # Add text to box
                 text_frame = box.text_frame
@@ -2018,16 +2024,22 @@ def create_slide_resolution_complexity_distribution(prs, hpeg_name, metrics, tem
                 compliance_pct = targets_met.get(complexity, 0)
                 count = data.get('count', 0)
 
-                # Performance bar box (NHS-COMPLIANT: white bg)
+                # Performance bar box with subtle background tint
                 perf_box = slide.shapes.add_shape(
                     MSO_SHAPE.ROUNDED_RECTANGLE,
                     Inches(0.9), Inches(y_bottom),
                     Inches(11.5), Inches(0.65)
                 )
                 perf_box.fill.solid()
-                perf_box.fill.fore_color.rgb = RGBColor(255, 255, 255)  # White background
+                # Subtle tinted backgrounds
+                if idx == 0:
+                    perf_box.fill.fore_color.rgb = RGBColor(245, 253, 245)  # Very light green
+                elif idx == 1:
+                    perf_box.fill.fore_color.rgb = RGBColor(255, 254, 245)  # Very light yellow
+                else:
+                    perf_box.fill.fore_color.rgb = RGBColor(255, 248, 248)  # Very light red
                 perf_box.line.color.rgb = RGBColor(*colors[idx])
-                perf_box.line.width = Pt(2)  # Increased from 1.5 to 2
+                perf_box.line.width = Pt(2)
 
                 text_frame = perf_box.text_frame
                 text_frame.margin_left = Inches(0.15)

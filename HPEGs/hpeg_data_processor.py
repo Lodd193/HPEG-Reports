@@ -126,6 +126,27 @@ EXEC_TEAMS = {
     "CORPORATE": "Corporate",
 }
 
+# CDG to HPEG mapping (based on CDG number prefix)
+# BHH: CDG1, CDG2
+# W&C: CDG3
+# GHH: CDG4, CDG5
+# SH: CDG6, CDG7
+# QEHB: CDG8, CDG9, CDG10
+# CSS: CDG11
+CDG_TO_HPEG_MAP = {
+    "1": "BHH Exec Team",
+    "2": "BHH Exec Team",
+    "3": "W&C Exec Team",
+    "4": "GHH Exec Team",
+    "5": "GHH Exec Team",
+    "6": "SH Exec Team",
+    "7": "SH Exec Team",
+    "8": "QEH Exec Team",
+    "9": "QEH Exec Team",
+    "10": "QEH Exec Team",
+    "11": "CSS Exec Team",
+}
+
 # Canonical Subjects (KO41a aligned)
 SUBJECTS_CANON = [
     "Access to Treatment or Drugs",
@@ -266,6 +287,35 @@ def override_exec_team_wc(df: pd.DataFrame) -> pd.DataFrame:
     if "Exec Team" not in df.columns:
         df["Exec Team"] = pd.NA
     df.loc[mask, "Exec Team"] = "W&C Exec Team"
+    return df
+
+def override_exec_team_by_cdg(df: pd.DataFrame) -> pd.DataFrame:
+    """Override Exec Team based on CDG number prefix."""
+    if "CDG" not in df.columns:
+        return df
+
+    if "Exec Team" not in df.columns:
+        df["Exec Team"] = pd.NA
+
+    def extract_cdg_number(cdg_value):
+        """Extract the numeric prefix from CDG (e.g., CDG11RAD -> 11, CDG1A -> 1)."""
+        if pd.isna(cdg_value):
+            return None
+        cdg_str = str(cdg_value).strip().upper()
+        # Match CDG followed by numbers
+        match = re.match(r'CDG(\d+)', cdg_str)
+        if match:
+            return match.group(1)
+        return None
+
+    # Extract CDG numbers
+    cdg_numbers = df["CDG"].apply(extract_cdg_number)
+
+    # Map to HPEGs
+    for cdg_num, hpeg in CDG_TO_HPEG_MAP.items():
+        mask = cdg_numbers == cdg_num
+        df.loc[mask, "Exec Team"] = hpeg
+
     return df
 
 def add_closed_and_deadline(df: pd.DataFrame, report_date: pd.Timestamp) -> pd.DataFrame:
@@ -625,6 +675,9 @@ def load_and_clean_data(csv_path: Path) -> pd.DataFrame:
 
     # Override W&C Exec Team
     df = override_exec_team_wc(df)
+
+    # Override Exec Team based on CDG mapping
+    df = override_exec_team_by_cdg(df)
 
     # Normalize Type
     if "Type" in df.columns:
