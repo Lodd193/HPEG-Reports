@@ -1657,56 +1657,56 @@ def create_slide_12month_cdg_trends(prs, hpeg_name, trends_12month, hpeg_cdgs, m
     # Create narrative text boxes
     y_pos = 1.2
 
-    # Header with time period
+    # Header with time period (LARGER TEXT, NHS BLUE)
     add_text_box(slide, f"Current Period ({period_label}) vs 12-Month Rolling Average",
                 left=0.8, top=y_pos, width=11.7, height=0.5,
-                font_size=12, bold=True, color_rgb=NHS_COLORS_RGB['nhs_dark_blue'])
+                font_size=16, bold=True, color_rgb=NHS_COLORS_RGB['nhs_blue'])
     y_pos += 0.6
 
     # Show top 5 CDGs
     for idx, insight in enumerate(insights[:5]):
-        # Determine color based on performance
+        # Determine color based on performance (NHS-COMPLIANT: white bg, colored border)
         if insight['current_median'] <= 40:
             box_color = NHS_COLORS_RGB['nhs_green']
-            bg_color = RGBColor(245, 255, 245)
+            bg_color = RGBColor(255, 255, 255)  # White background (dominant)
         elif insight['current_median'] <= 65:
             box_color = NHS_COLORS_RGB['nhs_warm_yellow']
-            bg_color = RGBColor(255, 250, 240)
+            bg_color = RGBColor(255, 255, 255)  # White background
         else:
-            box_color = NHS_COLORS_RGB['nhs_dark_red']
-            bg_color = RGBColor(255, 245, 245)
+            box_color = NHS_COLORS_RGB['nhs_orange']  # Orange instead of red (moderate)
+            bg_color = RGBColor(255, 255, 255)  # White background
 
-        # Create colored box
+        # Create colored box (LARGER SIZE, THICKER BORDER)
         box = slide.shapes.add_shape(
             MSO_SHAPE.ROUNDED_RECTANGLE,
             Inches(0.8), Inches(y_pos),
-            Inches(11.7), Inches(1.05)
+            Inches(11.7), Inches(1.35)  # Increased from 1.05 to 1.35
         )
         box.fill.solid()
         box.fill.fore_color.rgb = bg_color
         box.line.color.rgb = RGBColor(*box_color)
-        box.line.width = Pt(2)
+        box.line.width = Pt(3)  # Increased from 2 to 3
 
         text_frame = box.text_frame
-        text_frame.margin_left = Inches(0.15)
-        text_frame.margin_top = Inches(0.08)
+        text_frame.margin_left = Inches(0.2)  # Increased margin
+        text_frame.margin_top = Inches(0.12)  # Increased margin
         text_frame.word_wrap = True
 
-        # CDG name (bold)
+        # CDG name (bold, LARGER TEXT)
         p = text_frame.paragraphs[0]
         run = p.add_run()
         run.text = f"{idx+1}. {insight['cdg'][:50]}\n"
-        run.font.size = Pt(11)
+        run.font.size = Pt(15)  # Increased from 11 to 15
         run.font.bold = True
         run.font.color.rgb = RGBColor(*box_color)
 
-        # Current period median
+        # Current period median (LARGER TEXT)
         run = p.add_run()
         run.text = f"Current period median: {insight['current_median']:.1f} days • 12-month rolling median: {insight['rolling_median']:.1f} days\n"
-        run.font.size = Pt(10)
+        run.font.size = Pt(13)  # Increased from 10 to 13
         run.font.color.rgb = RGBColor(*NHS_COLORS_RGB['nhs_black'])
 
-        # Trend comparison (CLEAR what we're comparing)
+        # Trend comparison (LARGER TEXT)
         run = p.add_run()
         if insight['trend'] > 0:
             trend_text = f"⚠ Worsening: {abs(insight['trend']):.1f} days ABOVE 12-month average"
@@ -1715,19 +1715,19 @@ def create_slide_12month_cdg_trends(prs, hpeg_name, trends_12month, hpeg_cdgs, m
         else:
             trend_text = "Stable: matching 12-month average"
         run.text = f"{trend_text} • {insight['performance']}"
-        run.font.size = Pt(9)
+        run.font.size = Pt(11)  # Increased from 9 to 11
         run.font.color.rgb = RGBColor(*NHS_COLORS_RGB['nhs_mid_grey'])
 
-        y_pos += 1.15
+        y_pos += 1.4  # Increased spacing from 1.15 to 1.4
 
-    # Summary text at bottom
+    # Summary text at bottom (LARGER TEXT)
     if len(insights) > 5:
         add_text_box(slide, f"Showing top 5 of {len(insights)} CDGs by current median. Targets: Basic=25d, Regular=40d, Complex=65d",
-                    left=0.8, top=6.5, width=11.7, height=0.5, font_size=9,
+                    left=0.8, top=6.5, width=11.7, height=0.5, font_size=11,
                     color_rgb=NHS_COLORS_RGB['nhs_mid_grey'], alignment=PP_ALIGN.LEFT)
     else:
         add_text_box(slide, "Targets: Basic=25 days, Regular=40 days, Complex=65 days",
-                    left=0.8, top=6.5, width=11.7, height=0.5, font_size=9,
+                    left=0.8, top=6.5, width=11.7, height=0.5, font_size=11,
                     color_rgb=NHS_COLORS_RGB['nhs_mid_grey'], alignment=PP_ALIGN.LEFT)
 
 def create_slide_12month_specialty_trends(prs, hpeg_name, trends_12month, hpeg_specialties, metrics, temp_dir):
@@ -1826,56 +1826,56 @@ def create_slide_12month_specialty_trends(prs, hpeg_name, trends_12month, hpeg_s
     # Create narrative text boxes
     y_pos = 1.2
 
-    # Header with time period
+    # Header with time period (LARGER TEXT, NHS BLUE)
     add_text_box(slide, f"Current Period ({period_label}) vs 12-Month Rolling Average",
                 left=0.8, top=y_pos, width=11.7, height=0.5,
-                font_size=12, bold=True, color_rgb=NHS_COLORS_RGB['nhs_dark_blue'])
+                font_size=16, bold=True, color_rgb=NHS_COLORS_RGB['nhs_blue'])
     y_pos += 0.6
 
     # Show top 5 specialties
     for idx, insight in enumerate(insights[:5]):
-        # Determine color based on performance
+        # Determine color based on performance (NHS-COMPLIANT: white bg, colored border)
         if insight['current_median'] <= 40:
             box_color = NHS_COLORS_RGB['nhs_green']
-            bg_color = RGBColor(245, 255, 245)
+            bg_color = RGBColor(255, 255, 255)  # White background (dominant)
         elif insight['current_median'] <= 65:
             box_color = NHS_COLORS_RGB['nhs_warm_yellow']
-            bg_color = RGBColor(255, 250, 240)
+            bg_color = RGBColor(255, 255, 255)  # White background
         else:
-            box_color = NHS_COLORS_RGB['nhs_dark_red']
-            bg_color = RGBColor(255, 245, 245)
+            box_color = NHS_COLORS_RGB['nhs_orange']  # Orange instead of red (moderate)
+            bg_color = RGBColor(255, 255, 255)  # White background
 
-        # Create colored box
+        # Create colored box (LARGER SIZE, THICKER BORDER)
         box = slide.shapes.add_shape(
             MSO_SHAPE.ROUNDED_RECTANGLE,
             Inches(0.8), Inches(y_pos),
-            Inches(11.7), Inches(1.05)
+            Inches(11.7), Inches(1.35)  # Increased from 1.05 to 1.35
         )
         box.fill.solid()
         box.fill.fore_color.rgb = bg_color
         box.line.color.rgb = RGBColor(*box_color)
-        box.line.width = Pt(2)
+        box.line.width = Pt(3)  # Increased from 2 to 3
 
         text_frame = box.text_frame
-        text_frame.margin_left = Inches(0.15)
-        text_frame.margin_top = Inches(0.08)
+        text_frame.margin_left = Inches(0.2)  # Increased margin
+        text_frame.margin_top = Inches(0.12)  # Increased margin
         text_frame.word_wrap = True
 
-        # Specialty name (bold)
+        # Specialty name (bold, LARGER TEXT)
         p = text_frame.paragraphs[0]
         run = p.add_run()
         run.text = f"{idx+1}. {insight['specialty'][:50]}\n"
-        run.font.size = Pt(11)
+        run.font.size = Pt(15)  # Increased from 11 to 15
         run.font.bold = True
         run.font.color.rgb = RGBColor(*box_color)
 
-        # Current period median
+        # Current period median (LARGER TEXT)
         run = p.add_run()
         run.text = f"Current period median: {insight['current_median']:.1f} days • 12-month rolling median: {insight['rolling_median']:.1f} days\n"
-        run.font.size = Pt(10)
+        run.font.size = Pt(13)  # Increased from 10 to 13
         run.font.color.rgb = RGBColor(*NHS_COLORS_RGB['nhs_black'])
 
-        # Trend comparison (CLEAR what we're comparing)
+        # Trend comparison (LARGER TEXT)
         run = p.add_run()
         if insight['trend'] > 0:
             trend_text = f"⚠ Worsening: {abs(insight['trend']):.1f} days ABOVE 12-month average"
@@ -1884,19 +1884,19 @@ def create_slide_12month_specialty_trends(prs, hpeg_name, trends_12month, hpeg_s
         else:
             trend_text = "Stable: matching 12-month average"
         run.text = f"{trend_text} • {insight['performance']}"
-        run.font.size = Pt(9)
+        run.font.size = Pt(11)  # Increased from 9 to 11
         run.font.color.rgb = RGBColor(*NHS_COLORS_RGB['nhs_mid_grey'])
 
-        y_pos += 1.15
+        y_pos += 1.4  # Increased spacing from 1.15 to 1.4
 
-    # Summary text at bottom
+    # Summary text at bottom (LARGER TEXT)
     if len(insights) > 5:
         add_text_box(slide, f"Showing top 5 of {len(insights)} specialties by current median. Targets: Basic=25d, Regular=40d, Complex=65d",
-                    left=0.8, top=6.5, width=11.7, height=0.5, font_size=9,
+                    left=0.8, top=6.5, width=11.7, height=0.5, font_size=11,
                     color_rgb=NHS_COLORS_RGB['nhs_mid_grey'], alignment=PP_ALIGN.LEFT)
     else:
         add_text_box(slide, "Targets: Basic=25 days, Regular=40 days, Complex=65 days",
-                    left=0.8, top=6.5, width=11.7, height=0.5, font_size=9,
+                    left=0.8, top=6.5, width=11.7, height=0.5, font_size=11,
                     color_rgb=NHS_COLORS_RGB['nhs_mid_grey'], alignment=PP_ALIGN.LEFT)
 
 def create_slide_resolution_complexity_distribution(prs, hpeg_name, metrics, temp_dir):
@@ -1920,17 +1920,17 @@ def create_slide_resolution_complexity_distribution(prs, hpeg_name, metrics, tem
     resolution_by_comp = metrics.get('resolution_by_complexity', {})
 
     if len(resolution_by_comp) > 0:
-        # Header with time period
+        # Header with time period (LARGER TEXT, NHS BLUE)
         add_text_box(slide, f"Resolution Times & Performance Metrics for {period_label} (Business Days)", left=0.8, top=y_pos,
-                    width=11.7, height=0.4, font_size=12, bold=True,
-                    color_rgb=NHS_COLORS_RGB['nhs_dark_blue'])
+                    width=11.7, height=0.4, font_size=16, bold=True,
+                    color_rgb=NHS_COLORS_RGB['nhs_blue'])
         y_pos += 0.6
 
         # Table-like layout - LARGER boxes using more space
         complexities = ['Basic', 'Regular', 'Complex']
         targets = [25, 40, 65]
         colors = [NHS_COLORS_RGB['nhs_green'], NHS_COLORS_RGB['nhs_warm_yellow'],
-                  NHS_COLORS_RGB['nhs_dark_red']]
+                  NHS_COLORS_RGB['nhs_orange']]  # Orange instead of red (NHS-compliant)
 
         box_width = 3.7
         box_height = 1.5
@@ -1946,23 +1946,17 @@ def create_slide_resolution_complexity_distribution(prs, hpeg_name, metrics, tem
 
                 x_pos = start_x + (idx * (box_width + spacing))
 
-                # Create colored box
+                # Create colored box (NHS-COMPLIANT: white bg, colored border)
                 box = slide.shapes.add_shape(
                     MSO_SHAPE.ROUNDED_RECTANGLE,
                     Inches(x_pos), Inches(y_pos),
                     Inches(box_width), Inches(box_height)
                 )
                 box.fill.solid()
-                # Lighter tint of the color
-                if idx == 0:
-                    box.fill.fore_color.rgb = RGBColor(245, 255, 245)  # Light green
-                elif idx == 1:
-                    box.fill.fore_color.rgb = RGBColor(255, 250, 240)  # Light yellow
-                else:
-                    box.fill.fore_color.rgb = RGBColor(255, 245, 245)  # Light red
+                box.fill.fore_color.rgb = RGBColor(255, 255, 255)  # White background (dominant)
 
                 box.line.color.rgb = RGBColor(*color)
-                box.line.width = Pt(2.5)
+                box.line.width = Pt(3)  # Increased from 2.5 to 3
 
                 # Add text to box
                 text_frame = box.text_frame
@@ -1970,38 +1964,38 @@ def create_slide_resolution_complexity_distribution(prs, hpeg_name, metrics, tem
                 text_frame.margin_left = Inches(0.1)
                 text_frame.margin_top = Inches(0.1)
 
-                # Title
+                # Title (LARGER TEXT)
                 p = text_frame.paragraphs[0]
                 p.alignment = PP_ALIGN.CENTER
                 run = p.add_run()
                 run.text = f"{complexity}\n"
-                run.font.size = Pt(12)
+                run.font.size = Pt(15)  # Increased from 12 to 15
                 run.font.bold = True
                 run.font.color.rgb = RGBColor(*color)
 
-                # Mean
+                # Mean (LARGER TEXT)
                 p.add_run()
                 run = p.add_run()
                 run.text = f"Mean: {mean_val:.1f} days\n"
-                run.font.size = Pt(10)
+                run.font.size = Pt(13)  # Increased from 10 to 13
                 run.font.color.rgb = RGBColor(*NHS_COLORS_RGB['nhs_black'])
 
-                # Median
+                # Median (LARGER TEXT)
                 run = p.add_run()
                 run.text = f"Median: {median_val:.1f} days\n"
-                run.font.size = Pt(10)
+                run.font.size = Pt(13)  # Increased from 10 to 13
                 run.font.color.rgb = RGBColor(*NHS_COLORS_RGB['nhs_black'])
 
-                # Count
+                # Count (LARGER TEXT)
                 run = p.add_run()
                 run.text = f"Cases: {count}\n"
-                run.font.size = Pt(9)
+                run.font.size = Pt(11)  # Increased from 9 to 11
                 run.font.color.rgb = RGBColor(*NHS_COLORS_RGB['nhs_mid_grey'])
 
-                # Target
+                # Target (LARGER TEXT)
                 run = p.add_run()
                 run.text = f"Target: {target} days"
-                run.font.size = Pt(9)
+                run.font.size = Pt(11)  # Increased from 9 to 11
                 run.font.bold = True
                 run.font.color.rgb = RGBColor(*color)
 
@@ -2009,10 +2003,10 @@ def create_slide_resolution_complexity_distribution(prs, hpeg_name, metrics, tem
         y_bottom = y_pos + box_height + 0.4
         targets_met = metrics.get('targets_met_by_complexity', {})
 
-        # Performance Summary Section
+        # Performance Summary Section (LARGER TEXT, NHS BLUE)
         add_text_box(slide, "Performance Summary", left=0.8, top=y_bottom,
-                    width=11.7, height=0.4, font_size=12, bold=True,
-                    color_rgb=NHS_COLORS_RGB['nhs_dark_blue'])
+                    width=11.7, height=0.4, font_size=14, bold=True,
+                    color_rgb=NHS_COLORS_RGB['nhs_blue'])
         y_bottom += 0.5
 
         # Create performance bars for each complexity
@@ -2024,16 +2018,16 @@ def create_slide_resolution_complexity_distribution(prs, hpeg_name, metrics, tem
                 compliance_pct = targets_met.get(complexity, 0)
                 count = data.get('count', 0)
 
-                # Performance bar box
+                # Performance bar box (NHS-COMPLIANT: white bg)
                 perf_box = slide.shapes.add_shape(
                     MSO_SHAPE.ROUNDED_RECTANGLE,
                     Inches(0.9), Inches(y_bottom),
                     Inches(11.5), Inches(0.65)
                 )
                 perf_box.fill.solid()
-                perf_box.fill.fore_color.rgb = RGBColor(250, 250, 250)
+                perf_box.fill.fore_color.rgb = RGBColor(255, 255, 255)  # White background
                 perf_box.line.color.rgb = RGBColor(*colors[idx])
-                perf_box.line.width = Pt(1.5)
+                perf_box.line.width = Pt(2)  # Increased from 1.5 to 2
 
                 text_frame = perf_box.text_frame
                 text_frame.margin_left = Inches(0.15)
@@ -2043,30 +2037,30 @@ def create_slide_resolution_complexity_distribution(prs, hpeg_name, metrics, tem
                 p = text_frame.paragraphs[0]
                 p.alignment = PP_ALIGN.LEFT
 
-                # Complexity name
+                # Complexity name (LARGER TEXT)
                 run = p.add_run()
                 run.text = f"{complexity}: "
-                run.font.size = Pt(11)
+                run.font.size = Pt(13)  # Increased from 11 to 13
                 run.font.bold = True
                 run.font.color.rgb = RGBColor(*colors[idx])
 
-                # Performance details
+                # Performance details (LARGER TEXT)
                 run = p.add_run()
                 performance_status = "✓ Meeting target" if mean_val <= target else f"⚠ {mean_val - target:.1f} days over target"
                 run.text = f"{count} cases • Avg: {mean_val:.1f} days • Target: {target} days • {performance_status} • {compliance_pct:.0f}% compliant"
-                run.font.size = Pt(10)
+                run.font.size = Pt(12)  # Increased from 10 to 12
                 run.font.color.rgb = RGBColor(*NHS_COLORS_RGB['nhs_black'])
 
                 y_bottom += 0.75
 
-        # Add overall summary at bottom
+        # Add overall summary at bottom (LARGER TEXT)
         total_cases = sum(resolution_by_comp[c].get('count', 0) for c in complexities if c in resolution_by_comp)
         overall_compliance = sum(targets_met.get(c, 0) * resolution_by_comp[c].get('count', 0)
                                for c in complexities if c in resolution_by_comp)
         overall_compliance = overall_compliance / total_cases if total_cases > 0 else 0
 
         add_text_box(slide, f"Overall: {total_cases} total cases • {overall_compliance:.1f}% overall compliance",
-                    left=0.8, top=6.3, width=11.7, height=0.4, font_size=10, bold=True,
+                    left=0.8, top=6.3, width=11.7, height=0.4, font_size=12, bold=True,
                     color_rgb=NHS_COLORS_RGB['nhs_mid_grey'], alignment=PP_ALIGN.CENTER)
     else:
         add_text_box(slide, "No resolution time data available for current period",
