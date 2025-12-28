@@ -1560,12 +1560,44 @@ def create_slide_response_time_analysis(prs, hpeg_name, all_hpeg_metrics, temp_d
     # Add chart to slide
     add_image_to_slide(slide, response_path, left=0.6, top=1.2, width=11.8)
 
-def create_slide_12month_cdg_trends(prs, hpeg_name, trends_12month, hpeg_cdgs, temp_dir):
-    """NEW Slide: 12-Month CDG Resolution Trends - NARRATIVE FORMAT."""
+def create_slide_12month_cdg_trends(prs, hpeg_name, trends_12month, hpeg_cdgs, metrics, temp_dir):
+    """NEW Slide: Current Period vs 12-Month Rolling Average - CDGs."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    add_title_bar(slide, hpeg_name, "12-Month Resolution Trends by CDG")
+    add_title_bar(slide, hpeg_name, "Resolution Time Trends by CDG")
 
-    # Analyze trend data and create narrative insights
+    # Get current period months from dataframe
+    df_current = metrics.get('dataframe_current')
+    if df_current is None or len(df_current) == 0:
+        add_text_box(slide, "No data available",
+                    left=2, top=3, width=9.33, height=2, font_size=12,
+                    color_rgb=NHS_COLORS_RGB['nhs_mid_grey'],
+                    alignment=PP_ALIGN.CENTER)
+        return
+
+    # Get the 3 months in the current reporting period
+    if 'Completed Date' in df_current.columns:
+        df_temp = df_current.copy()
+        df_temp['Completed Month'] = pd.to_datetime(df_temp['Completed Date'], errors='coerce').dt.to_period('M')
+        current_months = sorted(df_temp['Completed Month'].dropna().unique())[-3:]  # Last 3 months
+    else:
+        add_text_box(slide, "No completion date data available",
+                    left=2, top=3, width=9.33, height=2, font_size=12,
+                    color_rgb=NHS_COLORS_RGB['nhs_mid_grey'],
+                    alignment=PP_ALIGN.CENTER)
+        return
+
+    if len(current_months) == 0:
+        add_text_box(slide, "No completion data for current period",
+                    left=2, top=3, width=9.33, height=2, font_size=12,
+                    color_rgb=NHS_COLORS_RGB['nhs_mid_grey'],
+                    alignment=PP_ALIGN.CENTER)
+        return
+
+    # Format month labels
+    month_labels = [m.strftime('%b %y') for m in current_months]
+    period_label = f"{month_labels[0]}-{month_labels[-1]}"
+
+    # Analyze trend data
     cdg_trends = trends_12month.get('resolution_by_cdg_monthly', {})
     cdg_trends_filtered = {cdg: months for cdg, months in cdg_trends.items() if cdg in hpeg_cdgs}
 
@@ -1576,61 +1608,68 @@ def create_slide_12month_cdg_trends(prs, hpeg_name, trends_12month, hpeg_cdgs, t
                     alignment=PP_ALIGN.CENTER)
         return
 
-    # Analyze trends
-    cutoff_date = pd.Period('2024-12', 'M')
     insights = []
-
     for cdg, monthly_data in cdg_trends_filtered.items():
-        # Filter to Dec 2024+
+        # Get last 12 months for rolling average
+        cutoff_date = pd.Period('2024-12', 'M')
         filtered_months = {m: v for m, v in monthly_data.items() if pd.Period(m) >= cutoff_date}
-        if len(filtered_months) < 2:
+        sorted_months = sorted(filtered_months.keys())[-12:]  # Last 12 months
+        twelve_month_values = [filtered_months[m] for m in sorted_months]
+
+        # Calculate 12-month rolling median
+        rolling_median = np.median(twelve_month_values) if len(twelve_month_values) > 0 else 0
+
+        # Get current 3-month values
+        current_period_values = [monthly_data.get(m, None) for m in current_months]
+        current_period_values = [v for v in current_period_values if v is not None and v > 0]
+
+        if len(current_period_values) == 0:
             continue
 
-        sorted_months = sorted(filtered_months.keys())[-12:]  # Last 12 months
-        values = [filtered_months[m] for m in sorted_months]
+        # Calculate current period median
+        current_median = np.median(current_period_values)
 
-        if len(values) >= 2:
-            # Calculate trend
-            recent_avg = np.mean(values[-3:]) if len(values) >= 3 else values[-1]
-            older_avg = np.mean(values[:3]) if len(values) >= 6 else values[0]
-            trend = recent_avg - older_avg
+        # Calculate difference
+        trend = current_median - rolling_median
 
-            # Determine performance vs targets
-            if recent_avg <= 25:
-                performance = "Excellent (within Basic target)"
-            elif recent_avg <= 40:
-                performance = "Good (within Regular target)"
-            elif recent_avg <= 65:
-                performance = "Acceptable (within Complex target)"
-            else:
-                performance = "Above target - requires attention"
+        # Determine performance
+        if current_median <= 25:
+            performance = "Excellent (within Basic target)"
+        elif current_median <= 40:
+            performance = "Good (within Regular target)"
+        elif current_median <= 65:
+            performance = "Acceptable (within Complex target)"
+        else:
+            performance = "Above target - requires attention"
 
-            insights.append({
-                'cdg': cdg,
-                'recent_avg': recent_avg,
-                'trend': trend,
-                'performance': performance
-            })
+        insights.append({
+            'cdg': cdg,
+            'current_median': current_median,
+            'rolling_median': rolling_median,
+            'trend': trend,
+            'performance': performance,
+            'month_values': current_period_values
+        })
 
-    # Sort by recent average (worst first)
-    insights.sort(key=lambda x: x['recent_avg'], reverse=True)
+    # Sort by current median (worst first)
+    insights.sort(key=lambda x: x['current_median'], reverse=True)
 
     # Create narrative text boxes
-    y_pos = 1.3
+    y_pos = 1.2
 
-    # Header
-    add_text_box(slide, "Resolution Time Analysis - Clinical Delivery Groups",
+    # Header with time period
+    add_text_box(slide, f"Current Period ({period_label}) vs 12-Month Rolling Average",
                 left=0.8, top=y_pos, width=11.7, height=0.5,
-                font_size=13, bold=True, color_rgb=NHS_COLORS_RGB['nhs_dark_blue'])
-    y_pos += 0.7
+                font_size=12, bold=True, color_rgb=NHS_COLORS_RGB['nhs_dark_blue'])
+    y_pos += 0.6
 
     # Show top 5 CDGs
     for idx, insight in enumerate(insights[:5]):
         # Determine color based on performance
-        if insight['recent_avg'] <= 40:
+        if insight['current_median'] <= 40:
             box_color = NHS_COLORS_RGB['nhs_green']
             bg_color = RGBColor(245, 255, 245)
-        elif insight['recent_avg'] <= 65:
+        elif insight['current_median'] <= 65:
             box_color = NHS_COLORS_RGB['nhs_warm_yellow']
             bg_color = RGBColor(255, 250, 240)
         else:
@@ -1641,7 +1680,7 @@ def create_slide_12month_cdg_trends(prs, hpeg_name, trends_12month, hpeg_cdgs, t
         box = slide.shapes.add_shape(
             MSO_SHAPE.ROUNDED_RECTANGLE,
             Inches(0.8), Inches(y_pos),
-            Inches(11.7), Inches(0.9)
+            Inches(11.7), Inches(1.05)
         )
         box.fill.solid()
         box.fill.fore_color.rgb = bg_color
@@ -1650,7 +1689,7 @@ def create_slide_12month_cdg_trends(prs, hpeg_name, trends_12month, hpeg_cdgs, t
 
         text_frame = box.text_frame
         text_frame.margin_left = Inches(0.15)
-        text_frame.margin_top = Inches(0.1)
+        text_frame.margin_top = Inches(0.08)
         text_frame.word_wrap = True
 
         # CDG name (bold)
@@ -1661,18 +1700,29 @@ def create_slide_12month_cdg_trends(prs, hpeg_name, trends_12month, hpeg_cdgs, t
         run.font.bold = True
         run.font.color.rgb = RGBColor(*box_color)
 
-        # Metrics
+        # Current period median
         run = p.add_run()
-        trend_text = "improving" if insight['trend'] < 0 else "worsening" if insight['trend'] > 0 else "stable"
-        run.text = f"Recent avg: {insight['recent_avg']:.1f} days (trend: {trend_text} by {abs(insight['trend']):.1f} days) - {insight['performance']}"
+        run.text = f"Current period median: {insight['current_median']:.1f} days • 12-month rolling median: {insight['rolling_median']:.1f} days\n"
         run.font.size = Pt(10)
         run.font.color.rgb = RGBColor(*NHS_COLORS_RGB['nhs_black'])
 
-        y_pos += 1.0
+        # Trend comparison (CLEAR what we're comparing)
+        run = p.add_run()
+        if insight['trend'] > 0:
+            trend_text = f"⚠ Worsening: {abs(insight['trend']):.1f} days ABOVE 12-month average"
+        elif insight['trend'] < 0:
+            trend_text = f"✓ Improving: {abs(insight['trend']):.1f} days BELOW 12-month average"
+        else:
+            trend_text = "Stable: matching 12-month average"
+        run.text = f"{trend_text} • {insight['performance']}"
+        run.font.size = Pt(9)
+        run.font.color.rgb = RGBColor(*NHS_COLORS_RGB['nhs_mid_grey'])
+
+        y_pos += 1.15
 
     # Summary text at bottom
     if len(insights) > 5:
-        add_text_box(slide, f"Showing top 5 of {len(insights)} CDGs. Targets: Basic=25d, Regular=40d, Complex=65d",
+        add_text_box(slide, f"Showing top 5 of {len(insights)} CDGs by current median. Targets: Basic=25d, Regular=40d, Complex=65d",
                     left=0.8, top=6.5, width=11.7, height=0.5, font_size=9,
                     color_rgb=NHS_COLORS_RGB['nhs_mid_grey'], alignment=PP_ALIGN.LEFT)
     else:
@@ -1680,12 +1730,44 @@ def create_slide_12month_cdg_trends(prs, hpeg_name, trends_12month, hpeg_cdgs, t
                     left=0.8, top=6.5, width=11.7, height=0.5, font_size=9,
                     color_rgb=NHS_COLORS_RGB['nhs_mid_grey'], alignment=PP_ALIGN.LEFT)
 
-def create_slide_12month_specialty_trends(prs, hpeg_name, trends_12month, hpeg_specialties, temp_dir):
-    """NEW Slide: 12-Month Specialty Resolution Trends - NARRATIVE FORMAT."""
+def create_slide_12month_specialty_trends(prs, hpeg_name, trends_12month, hpeg_specialties, metrics, temp_dir):
+    """NEW Slide: Current Period vs 12-Month Rolling Average - Specialties."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    add_title_bar(slide, hpeg_name, "12-Month Resolution Trends by Specialty")
+    add_title_bar(slide, hpeg_name, "Resolution Time Trends by Specialty")
 
-    # Analyze trend data and create narrative insights
+    # Get current period months from dataframe
+    df_current = metrics.get('dataframe_current')
+    if df_current is None or len(df_current) == 0:
+        add_text_box(slide, "No data available",
+                    left=2, top=3, width=9.33, height=2, font_size=12,
+                    color_rgb=NHS_COLORS_RGB['nhs_mid_grey'],
+                    alignment=PP_ALIGN.CENTER)
+        return
+
+    # Get the 3 months in the current reporting period
+    if 'Completed Date' in df_current.columns:
+        df_temp = df_current.copy()
+        df_temp['Completed Month'] = pd.to_datetime(df_temp['Completed Date'], errors='coerce').dt.to_period('M')
+        current_months = sorted(df_temp['Completed Month'].dropna().unique())[-3:]  # Last 3 months
+    else:
+        add_text_box(slide, "No completion date data available",
+                    left=2, top=3, width=9.33, height=2, font_size=12,
+                    color_rgb=NHS_COLORS_RGB['nhs_mid_grey'],
+                    alignment=PP_ALIGN.CENTER)
+        return
+
+    if len(current_months) == 0:
+        add_text_box(slide, "No completion data for current period",
+                    left=2, top=3, width=9.33, height=2, font_size=12,
+                    color_rgb=NHS_COLORS_RGB['nhs_mid_grey'],
+                    alignment=PP_ALIGN.CENTER)
+        return
+
+    # Format month labels
+    month_labels = [m.strftime('%b %y') for m in current_months]
+    period_label = f"{month_labels[0]}-{month_labels[-1]}"
+
+    # Analyze trend data
     specialty_trends = trends_12month.get('resolution_by_specialty_monthly', {})
     specialty_trends_filtered = {spec: months for spec, months in specialty_trends.items() if spec in hpeg_specialties}
 
@@ -1696,61 +1778,67 @@ def create_slide_12month_specialty_trends(prs, hpeg_name, trends_12month, hpeg_s
                     alignment=PP_ALIGN.CENTER)
         return
 
-    # Analyze trends
-    cutoff_date = pd.Period('2024-12', 'M')
     insights = []
-
     for specialty, monthly_data in specialty_trends_filtered.items():
-        # Filter to Dec 2024+
+        # Get last 12 months for rolling average
+        cutoff_date = pd.Period('2024-12', 'M')
         filtered_months = {m: v for m, v in monthly_data.items() if pd.Period(m) >= cutoff_date}
-        if len(filtered_months) < 2:
+        sorted_months = sorted(filtered_months.keys())[-12:]  # Last 12 months
+        twelve_month_values = [filtered_months[m] for m in sorted_months]
+
+        # Calculate 12-month rolling median
+        rolling_median = np.median(twelve_month_values) if len(twelve_month_values) > 0 else 0
+
+        # Get current 3-month values
+        current_period_values = [monthly_data.get(m, None) for m in current_months]
+        current_period_values = [v for v in current_period_values if v is not None and v > 0]
+
+        if len(current_period_values) == 0:
             continue
 
-        sorted_months = sorted(filtered_months.keys())[-12:]  # Last 12 months
-        values = [filtered_months[m] for m in sorted_months]
+        # Calculate current period median
+        current_median = np.median(current_period_values)
 
-        if len(values) >= 2:
-            # Calculate trend
-            recent_avg = np.mean(values[-3:]) if len(values) >= 3 else values[-1]
-            older_avg = np.mean(values[:3]) if len(values) >= 6 else values[0]
-            trend = recent_avg - older_avg
+        # Calculate difference
+        trend = current_median - rolling_median
 
-            # Determine performance vs targets
-            if recent_avg <= 25:
-                performance = "Excellent (within Basic target)"
-            elif recent_avg <= 40:
-                performance = "Good (within Regular target)"
-            elif recent_avg <= 65:
-                performance = "Acceptable (within Complex target)"
-            else:
-                performance = "Above target - requires attention"
+        # Determine performance
+        if current_median <= 25:
+            performance = "Excellent (within Basic target)"
+        elif current_median <= 40:
+            performance = "Good (within Regular target)"
+        elif current_median <= 65:
+            performance = "Acceptable (within Complex target)"
+        else:
+            performance = "Above target - requires attention"
 
-            insights.append({
-                'specialty': specialty,
-                'recent_avg': recent_avg,
-                'trend': trend,
-                'performance': performance
-            })
+        insights.append({
+            'specialty': specialty,
+            'current_median': current_median,
+            'rolling_median': rolling_median,
+            'trend': trend,
+            'performance': performance
+        })
 
-    # Sort by recent average (worst first)
-    insights.sort(key=lambda x: x['recent_avg'], reverse=True)
+    # Sort by current median (worst first)
+    insights.sort(key=lambda x: x['current_median'], reverse=True)
 
     # Create narrative text boxes
-    y_pos = 1.3
+    y_pos = 1.2
 
-    # Header
-    add_text_box(slide, "Resolution Time Analysis - Specialties",
+    # Header with time period
+    add_text_box(slide, f"Current Period ({period_label}) vs 12-Month Rolling Average",
                 left=0.8, top=y_pos, width=11.7, height=0.5,
-                font_size=13, bold=True, color_rgb=NHS_COLORS_RGB['nhs_dark_blue'])
-    y_pos += 0.7
+                font_size=12, bold=True, color_rgb=NHS_COLORS_RGB['nhs_dark_blue'])
+    y_pos += 0.6
 
     # Show top 5 specialties
     for idx, insight in enumerate(insights[:5]):
         # Determine color based on performance
-        if insight['recent_avg'] <= 40:
+        if insight['current_median'] <= 40:
             box_color = NHS_COLORS_RGB['nhs_green']
             bg_color = RGBColor(245, 255, 245)
-        elif insight['recent_avg'] <= 65:
+        elif insight['current_median'] <= 65:
             box_color = NHS_COLORS_RGB['nhs_warm_yellow']
             bg_color = RGBColor(255, 250, 240)
         else:
@@ -1761,7 +1849,7 @@ def create_slide_12month_specialty_trends(prs, hpeg_name, trends_12month, hpeg_s
         box = slide.shapes.add_shape(
             MSO_SHAPE.ROUNDED_RECTANGLE,
             Inches(0.8), Inches(y_pos),
-            Inches(11.7), Inches(0.9)
+            Inches(11.7), Inches(1.05)
         )
         box.fill.solid()
         box.fill.fore_color.rgb = bg_color
@@ -1770,7 +1858,7 @@ def create_slide_12month_specialty_trends(prs, hpeg_name, trends_12month, hpeg_s
 
         text_frame = box.text_frame
         text_frame.margin_left = Inches(0.15)
-        text_frame.margin_top = Inches(0.1)
+        text_frame.margin_top = Inches(0.08)
         text_frame.word_wrap = True
 
         # Specialty name (bold)
@@ -1781,18 +1869,29 @@ def create_slide_12month_specialty_trends(prs, hpeg_name, trends_12month, hpeg_s
         run.font.bold = True
         run.font.color.rgb = RGBColor(*box_color)
 
-        # Metrics
+        # Current period median
         run = p.add_run()
-        trend_text = "improving" if insight['trend'] < 0 else "worsening" if insight['trend'] > 0 else "stable"
-        run.text = f"Recent avg: {insight['recent_avg']:.1f} days (trend: {trend_text} by {abs(insight['trend']):.1f} days) - {insight['performance']}"
+        run.text = f"Current period median: {insight['current_median']:.1f} days • 12-month rolling median: {insight['rolling_median']:.1f} days\n"
         run.font.size = Pt(10)
         run.font.color.rgb = RGBColor(*NHS_COLORS_RGB['nhs_black'])
 
-        y_pos += 1.0
+        # Trend comparison (CLEAR what we're comparing)
+        run = p.add_run()
+        if insight['trend'] > 0:
+            trend_text = f"⚠ Worsening: {abs(insight['trend']):.1f} days ABOVE 12-month average"
+        elif insight['trend'] < 0:
+            trend_text = f"✓ Improving: {abs(insight['trend']):.1f} days BELOW 12-month average"
+        else:
+            trend_text = "Stable: matching 12-month average"
+        run.text = f"{trend_text} • {insight['performance']}"
+        run.font.size = Pt(9)
+        run.font.color.rgb = RGBColor(*NHS_COLORS_RGB['nhs_mid_grey'])
+
+        y_pos += 1.15
 
     # Summary text at bottom
     if len(insights) > 5:
-        add_text_box(slide, f"Showing top 5 of {len(insights)} specialties. Targets: Basic=25d, Regular=40d, Complex=65d",
+        add_text_box(slide, f"Showing top 5 of {len(insights)} specialties by current median. Targets: Basic=25d, Regular=40d, Complex=65d",
                     left=0.8, top=6.5, width=11.7, height=0.5, font_size=9,
                     color_rgb=NHS_COLORS_RGB['nhs_mid_grey'], alignment=PP_ALIGN.LEFT)
     else:
@@ -1805,14 +1904,25 @@ def create_slide_resolution_complexity_distribution(prs, hpeg_name, metrics, tem
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     add_title_bar(slide, hpeg_name, "Resolution Time by Complexity Level")
 
+    # Get current period months from dataframe for time period label
+    df_current = metrics.get('dataframe_current')
+    period_label = "Current Period"
+    if df_current is not None and len(df_current) > 0 and 'Completed Date' in df_current.columns:
+        df_temp = df_current.copy()
+        df_temp['Completed Month'] = pd.to_datetime(df_temp['Completed Date'], errors='coerce').dt.to_period('M')
+        current_months = sorted(df_temp['Completed Month'].dropna().unique())[-3:]  # Last 3 months
+        if len(current_months) > 0:
+            month_labels = [m.strftime('%b %y') for m in current_months]
+            period_label = f"{month_labels[0]}-{month_labels[-1]}"
+
     # Add summary boxes showing mean/median by complexity
     y_pos = 1.2
     resolution_by_comp = metrics.get('resolution_by_complexity', {})
 
     if len(resolution_by_comp) > 0:
-        # Header
-        add_text_box(slide, "Resolution Times & Performance Metrics (Business Days)", left=0.8, top=y_pos,
-                    width=11.7, height=0.4, font_size=13, bold=True,
+        # Header with time period
+        add_text_box(slide, f"Resolution Times & Performance Metrics for {period_label} (Business Days)", left=0.8, top=y_pos,
+                    width=11.7, height=0.4, font_size=12, bold=True,
                     color_rgb=NHS_COLORS_RGB['nhs_dark_blue'])
         y_pos += 0.6
 
@@ -2078,8 +2188,8 @@ def generate_hpeg_report(hpeg_name, data, temp_dir):
 
     # NEW ANALYSIS SLIDES
     create_slide_response_time_analysis(prs, hpeg_name, data['hpeg_metrics'], temp_dir)  # Slide 7: Response Time (ALL HPEGs comparison)
-    create_slide_12month_cdg_trends(prs, hpeg_name, trends_12month, hpeg_cdgs, temp_dir)  # Slide 8: 12M CDG Trends (HPEG-specific)
-    create_slide_12month_specialty_trends(prs, hpeg_name, trends_12month, hpeg_specialties, temp_dir)  # Slide 9: 12M Specialty Trends (HPEG-specific)
+    create_slide_12month_cdg_trends(prs, hpeg_name, trends_12month, hpeg_cdgs, metrics, temp_dir)  # Slide 8: Current period vs 12M rolling avg
+    create_slide_12month_specialty_trends(prs, hpeg_name, trends_12month, hpeg_specialties, metrics, temp_dir)  # Slide 9: Current period vs 12M rolling avg
     create_slide_resolution_complexity_distribution(prs, hpeg_name, metrics, temp_dir)  # Slide 10: Complexity Resolution
     create_slide_seasonal_patterns(prs, hpeg_name, trends_12month, metrics, temp_dir)  # Slide 11: Seasonal Patterns (HPEG-specific)
     create_slide_subject_deepdive(prs, hpeg_name, metrics, temp_dir)  # Slide 12: Subject Deep-Dive
