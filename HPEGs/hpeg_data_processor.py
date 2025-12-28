@@ -537,8 +537,10 @@ def calculate_topic_distributions(document_topic_matrix, df, group_col, group_va
 
     # Average topic weights across documents
     topic_dist = group_matrix.mean(axis=0)
-    # Normalize to sum to 1
-    topic_dist = topic_dist / topic_dist.sum()
+    # Normalize to sum to 1 (handle case where sum is 0)
+    total = topic_dist.sum()
+    if total > 0:
+        topic_dist = topic_dist / total
     return topic_dist
 
 # ============================================================================
@@ -902,6 +904,159 @@ def perform_topic_modeling(df_current: pd.DataFrame) -> dict:
         },
         'hpeg_specific': hpeg_models
     }
+
+def analyze_topic_performance(df_current: pd.DataFrame, doc_topics: np.ndarray, topics: list) -> dict:
+    """
+    Analyze performance metrics by topic for actionable insights.
+
+    Links topics to:
+    - Resolution times (median days to close)
+    - Complexity distribution
+    - CDG/Specialty associations
+
+    Returns priority-ranked topics for service improvement.
+    """
+    print("\n  Analyzing topic performance metrics...")
+
+    # Assign dominant topic to each complaint
+    dominant_topics = doc_topics.argmax(axis=1)
+    df_with_topics = df_current.copy()
+    df_with_topics['dominant_topic'] = dominant_topics
+
+    topic_performance = []
+
+    for topic_idx, topic in enumerate(topics):
+        topic_complaints = df_with_topics[df_with_topics['dominant_topic'] == topic_idx]
+
+        if len(topic_complaints) == 0:
+            continue
+
+        # Resolution time analysis (only for closed cases)
+        closed_complaints = topic_complaints[topic_complaints['Closed?'] == 'Yes']
+        if len(closed_complaints) > 0 and 'Resolution Days' in closed_complaints.columns:
+            median_resolution = closed_complaints['Resolution Days'].median()
+            resolution_count = len(closed_complaints)
+        else:
+            median_resolution = None
+            resolution_count = 0
+
+        # Complexity distribution
+        complexity_dist = {}
+        if 'Complexity' in topic_complaints.columns:
+            complexity_counts = topic_complaints['Complexity'].value_counts()
+            total = len(topic_complaints)
+            for comp in ['Basic', 'Regular', 'Complex']:
+                complexity_dist[comp] = (complexity_counts.get(comp, 0) / total * 100) if total > 0 else 0
+
+        # Top CDGs for this topic
+        top_cdgs = []
+        if 'CDG' in topic_complaints.columns:
+            cdg_counts = topic_complaints['CDG'].value_counts().head(3)
+            top_cdgs = [{'cdg': cdg, 'count': count} for cdg, count in cdg_counts.items()]
+
+        # Top specialties for this topic
+        top_specialties = []
+        if 'Specialty' in topic_complaints.columns:
+            spec_counts = topic_complaints['Specialty'].value_counts().head(3)
+            top_specialties = [{'specialty': spec, 'count': count} for spec, count in spec_counts.items()]
+
+        topic_performance.append({
+            'topic_id': topic['id'],
+            'topic_label': topic['label'],
+            'keywords': topic['keywords'],
+            'complaint_count': len(topic_complaints),
+            'prevalence_pct': len(topic_complaints) / len(df_current) * 100,
+            'median_resolution_days': median_resolution,
+            'resolution_count': resolution_count,
+            'complexity_dist': complexity_dist,
+            'top_cdgs': top_cdgs,
+            'top_specialties': top_specialties
+        })
+
+    print(f"  ✓ Performance analysis complete for {len(topic_performance)} topics")
+
+    return topic_performance
+
+def calculate_topic_priorities(hpeg_performance: dict, trust_avg_dist: np.ndarray) -> list:
+    """
+    Calculate priority scores for topics based on deviation and performance.
+
+    Priority = (Deviation from trust * 0.5) + (Resolution time percentile * 0.5)
+
+    Returns:
+        list: Priority-ranked topics (descending by score) with actionable recommendations.
+              Each topic dict includes priority_score, priority_level, priority_color, and recommendation.
+    """
+    print("\n  Calculating topic priorities...")
+
+    # Get HPEG distribution
+    hpeg_dist = hpeg_performance.get('topic_distribution', trust_avg_dist)
+    topic_perf = hpeg_performance.get('topic_performance', [])
+
+    priorities = []
+
+    # Calculate resolution time percentiles
+    resolution_times = [t['median_resolution_days'] for t in topic_perf
+                       if t['median_resolution_days'] is not None]
+
+    for topic in topic_perf:
+        topic_idx = topic['topic_id'] - 1  # Convert to 0-indexed
+
+        # Deviation from trust average
+        hpeg_weight = hpeg_dist[topic_idx] * 100 if topic_idx < len(hpeg_dist) else 0
+        trust_weight = trust_avg_dist[topic_idx] * 100 if topic_idx < len(trust_avg_dist) else 0
+        deviation = hpeg_weight - trust_weight
+        deviation_score = min(abs(deviation) / 10, 1.0)  # Normalize to 0-1
+
+        # Resolution time score
+        resolution_score = 0.0
+        if topic['median_resolution_days'] is not None and len(resolution_times) > 0:
+            percentile = sum(1 for rt in resolution_times if rt <= topic['median_resolution_days']) / len(resolution_times)
+            resolution_score = percentile
+
+        # Combined priority score
+        priority_score = (deviation_score * 0.5) + (resolution_score * 0.5)
+
+        # Determine priority level
+        if priority_score > 0.7:
+            priority_level = "CRITICAL"
+            priority_color = "#AE2573"  # NHS Pink
+        elif priority_score > 0.4:
+            priority_level = "MONITOR"
+            priority_color = "#005EB8"  # NHS Blue
+        else:
+            priority_level = "MAINTAIN"
+            priority_color = "#009639"  # NHS Green
+
+        # Generate recommendation
+        if priority_level == "CRITICAL":
+            recommendation = f"Immediate review of {topic['topic_label']} processes"
+        elif priority_level == "MONITOR":
+            recommendation = f"Monitor {topic['topic_label']} trends and consider preventive action"
+        else:
+            recommendation = f"Continue current approach for {topic['topic_label']}"
+
+        priorities.append({
+            **topic,
+            'hpeg_prevalence': hpeg_weight,
+            'trust_prevalence': trust_weight,
+            'deviation': deviation,
+            'deviation_direction': '↑' if deviation > 0 else '↓' if deviation < 0 else '→',
+            'priority_score': priority_score,
+            'priority_level': priority_level,
+            'priority_color': priority_color,
+            'recommendation': recommendation
+        })
+
+    # Sort by priority score descending
+    priorities.sort(key=lambda x: x['priority_score'], reverse=True)
+
+    print(f"  ✓ Priority analysis complete")
+    print(f"    CRITICAL: {sum(1 for p in priorities if p['priority_level'] == 'CRITICAL')}")
+    print(f"    MONITOR: {sum(1 for p in priorities if p['priority_level'] == 'MONITOR')}")
+    print(f"    MAINTAIN: {sum(1 for p in priorities if p['priority_level'] == 'MAINTAIN')}")
+
+    return priorities
 
 def generate_narrative_insights(df_current: pd.DataFrame, hpeg_name: str) -> list:
     """
@@ -1282,6 +1437,51 @@ def main():
     # Topic modeling
     topic_models = perform_topic_modeling(df_current)
 
+    # Topic performance analysis (links topics to actionable insights)
+    print(f"\n{'='*70}")
+    print("STEP 3B: TOPIC PERFORMANCE & PRIORITY ANALYSIS")
+    print(f"{'='*70}")
+
+    trust_doc_topics = topic_models['trust_wide']['doc_topics']
+    trust_topics = topic_models['trust_wide']['topics']
+    trust_avg_dist = np.mean(list(topic_models['trust_wide']['hpeg_distributions'].values()), axis=0)
+
+    hpeg_topic_analysis = {}
+    for hpeg in ['BHH Exec Team', 'QEH Exec Team', 'GHH Exec Team', 'SH Exec Team', 'W&C Exec Team', 'CSS Exec Team']:
+        hpeg_df = df_current[df_current['Exec Team'] == hpeg].copy()
+
+        if len(hpeg_df) < 10:
+            print(f"  ⚠ {hpeg}: Insufficient data ({len(hpeg_df)} complaints), skipping topic analysis")
+            continue
+
+        # Get HPEG-specific topic distribution from original indices
+        hpeg_indices = hpeg_df.index
+
+        # Get corresponding rows from trust_doc_topics
+        # Need to map DataFrame indices to doc_topics array indices
+        original_index_map = {idx: i for i, idx in enumerate(df_current.index)}
+        hpeg_array_indices = [original_index_map[idx] for idx in hpeg_indices if idx in original_index_map]
+        hpeg_doc_topics = trust_doc_topics[hpeg_array_indices]
+
+        # Analyze performance
+        topic_perf = analyze_topic_performance(hpeg_df, hpeg_doc_topics, trust_topics)
+
+        # Calculate priorities
+        hpeg_dist = topic_models['trust_wide']['hpeg_distributions'][hpeg]
+        priorities = calculate_topic_priorities(
+            {'topic_distribution': hpeg_dist, 'topic_performance': topic_perf},
+            trust_avg_dist
+        )
+
+        hpeg_topic_analysis[hpeg] = priorities
+
+        # Display top 3 priorities
+        critical_count = sum(1 for p in priorities if p['priority_level'] == 'CRITICAL')
+        monitor_count = sum(1 for p in priorities if p['priority_level'] == 'MONITOR')
+        print(f"    ✓ {hpeg}: {critical_count} CRITICAL, {monitor_count} MONITOR priorities identified")
+
+    print(f"  ✓ Topic performance analysis complete for {len(hpeg_topic_analysis)} HPEGs")
+
     # Calculate metrics (pass full df for 6+ month calculation)
     hpeg_metrics = calculate_metrics_by_hpeg(df_current, df_previous, df)
 
@@ -1310,6 +1510,7 @@ def main():
     output_data = {
         'periods': periods,
         'topic_models': topic_models,
+        'topic_analysis': hpeg_topic_analysis,
         'hpeg_metrics': hpeg_metrics,
         'demographic_findings': demographic_findings,
         'trends_12month': trends_12month,
@@ -1341,6 +1542,7 @@ def main():
     print(f"  • Total complaints analyzed: {len(df_current):,}")
     print(f"  • Trust-wide topics identified: {len(topic_models['trust_wide']['topics'])}")
     print(f"  • HPEG-specific models: {len(topic_models['hpeg_specific'])}")
+    print(f"  • Topic priority analysis: {len(hpeg_topic_analysis)} HPEGs")
     print(f"  • Demographic findings: {len(demographic_findings)}")
 
     print(f"\nNext step: Run hpeg_report_generator.py to create PowerPoint reports")

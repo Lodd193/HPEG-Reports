@@ -1,11 +1,119 @@
 # HPEG Reporting System - Implementation Progress
-**Date:** 28 December 2024
-**Session:** Aesthetic Improvements - NHS Branding Compliance
-**Last Updated:** 28 December 2024
+**Date:** 28 December 2025
+**Session:** Topic Intelligence Integration - Strategic Insights for Service Improvement
+**Last Updated:** 28 December 2025
 
 ---
 
-## 🎨 LATEST SESSION - AESTHETIC IMPROVEMENTS COMPLETED (28 Dec 2024)
+## 🚀 LATEST SESSION - TOPIC INTELLIGENCE INTEGRATION COMPLETED (28 Dec 2025)
+
+### **Strategic Topic Modelling for Actionable Insights**
+
+Successfully implemented comprehensive topic intelligence system that extracts actionable insights from complaint narratives to drive service improvement.
+
+#### **New Features Implemented:**
+
+**1. Topic Performance Analysis (hpeg_data_processor.py)**
+
+Added two major analytical functions:
+
+- **`analyze_topic_performance()`** (Lines 906-976):
+  - Links topics to resolution times (median days to close)
+  - Calculates complexity distribution per topic
+  - Identifies top CDGs and Specialties for each topic
+  - Returns structured performance data for visualization
+
+- **`calculate_topic_priorities()`** (Lines 978-1058):
+  - Calculates priority scores: `(deviation × 0.5) + (resolution_percentile × 0.5)`
+  - Assigns priority levels: CRITICAL (>0.7), MONITOR (>0.4), MAINTAIN (≤0.4)
+  - Generates actionable recommendations based on priority level
+  - Color-codes priorities: Pink (critical), Blue (monitor), Green (maintain)
+
+**2. Pipeline Integration (Lines 1439-1482)**:
+- Integrated after topic modeling step in main() function
+- Creates `hpeg_topic_analysis` dictionary for all 6 HPEGs
+- Displays priority counts during processing
+- Saved to `processed_data.pkl` as `topic_analysis` key
+
+**3. Topic Intelligence Visualization (hpeg_report_generator.py)**
+
+- **`create_topic_intelligence_chart()`** (Lines 588-688):
+  - Professional 3-column layout: Priority | Theme & Performance | Recommended Action
+  - Shows top 5 priority topics sorted by score
+  - Color-coded priority boxes (CRITICAL/MONITOR/MAINTAIN)
+  - Displays keywords, prevalence %, median resolution days
+  - Actionable recommendations for each priority topic
+  - Footer with priority scoring explanation
+
+**4. New Slide 7: Topic Intelligence & Priority Themes**
+
+- **`create_slide_4_topic_intelligence()`** updated (Lines 1491-1518):
+  - Strategic slide showing top 5 priority topics
+  - Replaces old unused topic slide
+  - Gracefully handles insufficient data (< 10 complaints)
+  - Full-width chart positioned below title
+
+**5. Report Generation Integration (Lines 2317-2319)**:
+- Topic Intelligence now Slide 7 (after Narrative Insights)
+- All subsequent slides renumbered accordingly
+- Properly retrieves `topic_analysis` from processed data
+
+#### **Updated Slide Structure (19 Slides):**
+
+| Slide | Title | Status | Notes |
+|-------|-------|--------|-------|
+| 1 | Executive Dashboard | ✅ Working | KPI boxes + 6-month trend |
+| 2 | Complaints by Location | ✅ Working | Top 5 locations |
+| 3 | Complaints by Specialty | ✅ Working | Top 5 specialties |
+| 4 | CDG Breakdown | ✅ Working | Top 5 CDGs |
+| 5 | Subject Trends | ✅ Working | Top subjects across 3 months |
+| 6 | Narrative Insights | ✅ Working | CDG volume trends |
+| **7** | **Topic Intelligence & Priority Themes** | ✅ **NEW** | **Strategic actionable insights from topic modeling** |
+| 8 | Complaint Resolution Efficiency | ✅ Working | Cross-HPEG comparison |
+| 9 | 12-Month CDG Trends | ✅ Working | Heat map format |
+| 10 | 12-Month Specialty Trends | ✅ Working | Heat map format |
+| 11 | Resolution Time by Complexity | ✅ Working | Three colored boxes |
+| 12 | Seasonal Patterns | ✅ Working | 12-month view |
+| 13 | Subject Deep-Dive | ✅ Working | Top 3 subjects |
+| 14 | Complexity Distribution | ✅ Working | Donut chart |
+| 15 | Risk Dashboard | ✅ Working | 6-month cases, safeguarding |
+| 16 | Demographics | ✅ Working | Conditional - demographic-topic findings |
+| 17 | 10 Oldest Cases | ✅ Working | Blank template |
+| 18 | Actions Status | ✅ Working | Blank template |
+| 19 | Current Performance | ✅ Working | Blank template |
+
+#### **Value Proposition:**
+
+The Topic Intelligence system provides executives with:
+1. **Priority Ranking**: Automatically identifies which complaint themes need immediate attention
+2. **Performance Metrics**: Links topics to resolution times and complexity levels
+3. **Service Improvement Targets**: Shows which CDGs/Specialties are most affected by each priority topic
+4. **Actionable Recommendations**: Auto-generates specific actions based on priority level and performance
+5. **Trust-wide Context**: Compares HPEG topic prevalence to trust-wide averages
+
+#### **Technical Implementation:**
+
+**Priority Scoring Algorithm:**
+```python
+deviation_score = min(abs(hpeg_prevalence - trust_prevalence) / 10, 1.0)
+resolution_percentile = complaints_resolved_slower_than_topic_median / total_complaints
+priority_score = (deviation_score × 0.5) + (resolution_percentile × 0.5)
+```
+
+**Recommendation Engine:**
+- CRITICAL (>0.7): "Immediate review of [topic] processes with clinical leads"
+- MONITOR (>0.4): "Establish improvement plan and track monthly"
+- MAINTAIN (≤0.4): "Continue current approach - performing well"
+
+#### **Testing Status:**
+- ✅ Syntax validation passed for both scripts
+- ✅ Topic performance analysis functions created and integrated
+- ⏳ Full pipeline test pending (user needs to run hpeg_data_processor.py)
+- ⏳ Visual validation pending (generate reports to verify Topic Intelligence slide)
+
+---
+
+## 🎨 PREVIOUS SESSION - AESTHETIC IMPROVEMENTS COMPLETED (28 Dec 2024)
 
 ### **NHS Branding Compliance & Readability Enhancements:**
 

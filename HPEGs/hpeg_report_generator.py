@@ -585,6 +585,108 @@ def create_topic_analysis_chart(topics, hpeg_dist, trust_avg_dist):
     plt.tight_layout()
     return fig
 
+def create_topic_intelligence_chart(topic_priorities):
+    """
+    Create strategic Topic Intelligence chart showing priorities and actionable insights.
+
+    Args:
+        topic_priorities: List of topic priority dicts with keys:
+            - topic_label, keywords, priority_level, priority_score,
+            - median_resolution_days, recommendation, etc.
+
+    Returns:
+        matplotlib Figure showing top 5 priority topics with insights
+    """
+    fig = plt.figure(figsize=(12, 6))
+    fig.patch.set_facecolor('white')
+
+    # Create grid for layout: 3 columns (Priority | Topic & Metrics | Recommendation)
+    gs = fig.add_gridspec(6, 3, hspace=0.3, wspace=0.15,
+                          left=0.08, right=0.95, top=0.92, bottom=0.05)
+
+    # Title
+    fig.text(0.5, 0.97, 'Topic Intelligence & Priority Themes',
+             ha='center', fontsize=16, fontweight='bold',
+             color=NHS_COLORS_HEX['nhs_dark_blue'])
+
+    # Column headers
+    fig.text(0.15, 0.92, 'Priority', ha='center', fontsize=11, fontweight='bold',
+             color=NHS_COLORS_HEX['nhs_dark_grey'])
+    fig.text(0.45, 0.92, 'Theme & Performance', ha='center', fontsize=11, fontweight='bold',
+             color=NHS_COLORS_HEX['nhs_dark_grey'])
+    fig.text(0.75, 0.92, 'Recommended Action', ha='center', fontsize=11, fontweight='bold',
+             color=NHS_COLORS_HEX['nhs_dark_grey'])
+
+    # Sort by priority score (descending) and take top 5
+    sorted_topics = sorted(topic_priorities, key=lambda x: x['priority_score'], reverse=True)[:5]
+
+    y_positions = [0.78, 0.63, 0.48, 0.33, 0.18]
+
+    for idx, (topic, y_pos) in enumerate(zip(sorted_topics, y_positions)):
+        # Priority box (left column)
+        priority_level = topic['priority_level']
+        priority_color = topic['priority_color']
+
+        # Priority indicator box
+        fig.patches.extend([plt.Rectangle((0.08, y_pos - 0.02), 0.14, 0.10,
+                                         facecolor=priority_color, edgecolor=NHS_COLORS_HEX['nhs_dark_grey'],
+                                         linewidth=2, transform=fig.transFigure, zorder=2)])
+
+        fig.text(0.15, y_pos + 0.04, priority_level, ha='center', va='center',
+                fontsize=12, fontweight='bold', color='white')
+        fig.text(0.15, y_pos - 0.005, f"Score: {topic['priority_score']:.2f}", ha='center', va='center',
+                fontsize=8, color='white')
+
+        # Topic details (middle column)
+        topic_label = topic['topic_label']
+        keywords = ', '.join(topic['keywords'][:5])  # Top 5 keywords
+        prevalence = topic.get('prevalence_pct', 0)
+        median_days = topic.get('median_resolution_days', 0)
+
+        # Topic label
+        fig.text(0.25, y_pos + 0.05, f"{topic_label}", ha='left', va='top',
+                fontsize=11, fontweight='bold', color=NHS_COLORS_HEX['nhs_blue'])
+
+        # Keywords
+        fig.text(0.25, y_pos + 0.02, f"Keywords: {keywords}", ha='left', va='top',
+                fontsize=8, style='italic', color=NHS_COLORS_HEX['nhs_mid_grey'])
+
+        # Metrics
+        fig.text(0.25, y_pos - 0.01, f"Prevalence: {prevalence:.1f}%  •  Median Resolution: {median_days:.0f} days",
+                ha='left', va='top', fontsize=9, color=NHS_COLORS_HEX['nhs_dark_grey'])
+
+        # Recommendation (right column)
+        recommendation = topic.get('recommendation', 'Review and monitor')
+
+        # Word wrap recommendation text (max ~40 chars per line)
+        words = recommendation.split()
+        lines = []
+        current_line = []
+        current_length = 0
+
+        for word in words:
+            if current_length + len(word) + 1 > 40:
+                lines.append(' '.join(current_line))
+                current_line = [word]
+                current_length = len(word)
+            else:
+                current_line.append(word)
+                current_length += len(word) + 1
+        if current_line:
+            lines.append(' '.join(current_line))
+
+        # Display recommendation lines
+        for line_idx, line in enumerate(lines[:2]):  # Max 2 lines
+            fig.text(0.63, y_pos + 0.05 - (line_idx * 0.025), line, ha='left', va='top',
+                    fontsize=9, color=NHS_COLORS_HEX['nhs_dark_grey'], wrap=True)
+
+    # Footer note
+    fig.text(0.5, 0.02,
+             'Priority Score = (Deviation from trust × 0.5) + (Resolution time percentile × 0.5)  •  CRITICAL > 0.7  •  MONITOR > 0.4  •  MAINTAIN ≤ 0.4',
+             ha='center', fontsize=8, style='italic', color=NHS_COLORS_HEX['nhs_mid_grey'])
+
+    return fig
+
 def create_deadline_compliance_chart(df_current):
     """Create deadline compliance chart."""
     fig, ax = plt.subplots(figsize=(6, 4.5))
@@ -1386,22 +1488,34 @@ def _create_insight_card(slide, insight, left, top, width):
 
     return card
 
-def create_slide_4_topic_intelligence(prs, hpeg_name, topic_data, hpeg_dist, temp_dir):
-    """Slide 4: Topic Intelligence (REMOVED - replaced by narrative insights)."""
+def create_slide_4_topic_intelligence(prs, hpeg_name, topic_priorities, temp_dir):
+    """
+    Slide 4: Strategic Topic Intelligence & Priority Themes.
+
+    Displays top 5 priority topics with:
+    - Priority level (CRITICAL/MONITOR/MAINTAIN)
+    - Topic keywords and metrics
+    - Actionable recommendations
+    """
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    add_title_bar(slide, hpeg_name, "Topic Intelligence - Hidden Patterns")
+    add_title_bar(slide, hpeg_name, "Topic Intelligence & Priority Themes")
 
-    # Calculate trust average (mean of all HPEG distributions)
-    all_dists = topic_data['hpeg_distributions'].values()
-    trust_avg = np.mean(list(all_dists), axis=0)
+    # Check if topic priorities exist and have data
+    if not topic_priorities or len(topic_priorities) == 0:
+        # No topic data available - add message
+        add_text_box(slide, "Insufficient data for topic analysis (minimum 10 complaints required)",
+                    left=2, top=3, width=9, height=1, font_size=14,
+                    color_rgb=NHS_COLORS_RGB['nhs_mid_grey'], alignment=PP_ALIGN.CENTER)
+        return
 
-    # Create chart
-    topic_fig = create_topic_analysis_chart(topic_data['topics'], hpeg_dist, trust_avg)
-    topic_path = temp_dir / f"topics_{hpeg_name}.png"
+    # Create strategic topic intelligence chart
+    topic_fig = create_topic_intelligence_chart(topic_priorities)
+    topic_path = temp_dir / f"topic_intelligence_{hpeg_name}.png"
     topic_fig.savefig(topic_path, dpi=120, bbox_inches='tight', facecolor='white', pad_inches=0.1)
     plt.close(topic_fig)
 
-    add_image_to_slide(slide, topic_path, left=0.6, top=1.1, width=11.8)
+    # Add chart to slide (full width, positioned below title)
+    add_image_to_slide(slide, topic_path, left=0.5, top=1.1, width=12)
 
 def create_slide_5_performance_metrics(prs, hpeg_name, metrics, temp_dir):
     """Slide 5: Complexity Distribution."""
@@ -2200,21 +2314,25 @@ def generate_hpeg_report(hpeg_name, data, temp_dir):
     create_slide_3_rolling_subjects(prs, hpeg_name, metrics, temp_dir)  # Slide 5: Subject Trends
     create_slide_narrative_insights(prs, hpeg_name, metrics)  # Slide 6: Narrative Insights
 
+    # NEW: Topic Intelligence & Priority Themes (Slide 7)
+    topic_priorities = data.get('topic_analysis', {}).get(hpeg_name, [])
+    create_slide_4_topic_intelligence(prs, hpeg_name, topic_priorities, temp_dir)  # Slide 7: Topic Intelligence
+
     # NEW ANALYSIS SLIDES
-    create_slide_response_time_analysis(prs, hpeg_name, data['hpeg_metrics'], temp_dir)  # Slide 7: Response Time (ALL HPEGs comparison)
-    create_slide_12month_cdg_trends(prs, hpeg_name, trends_12month, hpeg_cdgs, metrics, temp_dir)  # Slide 8: Current period vs 12M rolling avg
-    create_slide_12month_specialty_trends(prs, hpeg_name, trends_12month, hpeg_specialties, metrics, temp_dir)  # Slide 9: Current period vs 12M rolling avg
-    create_slide_resolution_complexity_distribution(prs, hpeg_name, metrics, temp_dir)  # Slide 10: Complexity Resolution
-    create_slide_seasonal_patterns(prs, hpeg_name, trends_12month, metrics, temp_dir)  # Slide 11: Seasonal Patterns (HPEG-specific)
-    create_slide_subject_deepdive(prs, hpeg_name, metrics, temp_dir)  # Slide 12: Subject Deep-Dive
+    create_slide_response_time_analysis(prs, hpeg_name, data['hpeg_metrics'], temp_dir)  # Slide 8: Response Time (ALL HPEGs comparison)
+    create_slide_12month_cdg_trends(prs, hpeg_name, trends_12month, hpeg_cdgs, metrics, temp_dir)  # Slide 9: CDG 12-month trends
+    create_slide_12month_specialty_trends(prs, hpeg_name, trends_12month, hpeg_specialties, metrics, temp_dir)  # Slide 10: Specialty 12-month trends
+    create_slide_resolution_complexity_distribution(prs, hpeg_name, metrics, temp_dir)  # Slide 11: Complexity Resolution
+    create_slide_seasonal_patterns(prs, hpeg_name, trends_12month, metrics, temp_dir)  # Slide 12: Seasonal Patterns (HPEG-specific)
+    create_slide_subject_deepdive(prs, hpeg_name, metrics, temp_dir)  # Slide 13: Subject Deep-Dive
 
     # EXISTING SLIDES (renumbered)
-    create_slide_5_performance_metrics(prs, hpeg_name, metrics, temp_dir)  # Slide 13: Complexity Donut
-    create_slide_6_risk_dashboard(prs, hpeg_name, metrics)  # Slide 14: Risk Dashboard
-    create_slide_7_demographics(prs, hpeg_name, metrics, demographic_findings)  # Slide 15: Demographics (conditional)
-    create_slide_8_oldest_cases(prs, hpeg_name)  # Slide 16: Oldest Cases (blank)
-    create_slide_9_actions_status(prs, hpeg_name)  # Slide 17: Actions (blank)
-    create_slide_10_current_performance(prs, hpeg_name)  # Slide 18: Performance (blank)
+    create_slide_5_performance_metrics(prs, hpeg_name, metrics, temp_dir)  # Slide 14: Complexity Donut
+    create_slide_6_risk_dashboard(prs, hpeg_name, metrics)  # Slide 15: Risk Dashboard
+    create_slide_7_demographics(prs, hpeg_name, metrics, demographic_findings)  # Slide 16: Demographics (conditional)
+    create_slide_8_oldest_cases(prs, hpeg_name)  # Slide 17: Oldest Cases (blank)
+    create_slide_9_actions_status(prs, hpeg_name)  # Slide 18: Actions (blank)
+    create_slide_10_current_performance(prs, hpeg_name)  # Slide 19: Performance (blank)
 
     # Save
     period_label = data['periods']['label_current'].replace(' ', '-')
