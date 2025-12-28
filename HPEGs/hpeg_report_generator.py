@@ -264,20 +264,20 @@ def create_6month_trend_chart(df_current, df_previous, hpeg_name):
     # Sort by month
     monthly_status = monthly_status.sort_index()
 
-    # Create stacked bars with SUBTLE PASTEL colors matching slides 8/9/10
+    # Create stacked bars with NHS official colors
     x_pos = np.arange(len(monthly_status))
 
     # Closed cases (bottom of stack)
     bars_closed = ax.bar(x_pos, monthly_status['Yes'],
                          label='Closed',
-                         color='#90EE90',  # Light green
+                         color='#009639',  # NHS Green
                          edgecolor=NHS_COLORS_HEX['nhs_dark_grey'], linewidth=2)
 
     # Ongoing cases (top of stack)
     bars_ongoing = ax.bar(x_pos, monthly_status['Ongoing'],
                           bottom=monthly_status['Yes'],
                           label='Ongoing',
-                          color='#FFB6C1',  # Light pink/red
+                          color='#AE2573',  # NHS Pink
                           edgecolor=NHS_COLORS_HEX['nhs_dark_grey'], linewidth=2)
 
     # Add value labels on each segment
@@ -643,9 +643,9 @@ def create_complexity_donut_chart(complexity_dist):
     fig, ax = plt.subplots(figsize=(6, 4))
     fig.patch.set_facecolor('white')
 
-    # Define expected categories with SUBTLE PASTEL colors matching slides 8/9/10
+    # Define expected categories with NHS official colors
     categories = ['Basic', 'Regular', 'Complex']
-    colors = ['#90EE90', '#FFE87C', '#FFB6C1']  # Light green, light yellow, light pink/red
+    colors = ['#009639', '#005EB8', '#AE2573']  # Basic=Green, Regular=Blue, Complex=Pink
 
     values = [complexity_dist.get(cat, 0) for cat in categories]
     total = sum(values)
@@ -757,10 +757,10 @@ def create_response_time_chart(all_hpeg_metrics, current_hpeg_name):
         for comp in complexities:
             compliance_data[comp].append(targets_met.get(comp, 0))
 
-    # Create grouped bars with SUBTLE PASTEL colors matching slides 8/9/10
+    # Create grouped bars with NHS official colors
     x_pos2 = np.arange(len(hpeg_labels))
     width2 = 0.25
-    colors_complex = ['#90EE90', '#FFE87C', '#FFB6C1']  # Light green, light yellow, light pink/red
+    colors_complex = ['#009639', '#005EB8', '#AE2573']  # Basic=Green, Regular=Blue, Complex=Pink
 
     for idx, (comp, color) in enumerate(zip(complexities, colors_complex)):
         offset = (idx - 1) * width2
