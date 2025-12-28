@@ -264,36 +264,36 @@ def create_6month_trend_chart(df_current, df_previous, hpeg_name):
     # Sort by month
     monthly_status = monthly_status.sort_index()
 
-    # Create stacked bars
+    # Create stacked bars with SUBTLE PASTEL colors matching slides 8/9/10
     x_pos = np.arange(len(monthly_status))
 
     # Closed cases (bottom of stack)
     bars_closed = ax.bar(x_pos, monthly_status['Yes'],
                          label='Closed',
-                         color=NHS_COLORS_HEX['nhs_green'],
-                         edgecolor='white', linewidth=2, alpha=0.9)
+                         color='#90EE90',  # Light green
+                         edgecolor=NHS_COLORS_HEX['nhs_dark_grey'], linewidth=2)
 
     # Ongoing cases (top of stack)
     bars_ongoing = ax.bar(x_pos, monthly_status['Ongoing'],
                           bottom=monthly_status['Yes'],
                           label='Ongoing',
-                          color=NHS_COLORS_HEX['nhs_orange'],
-                          edgecolor='white', linewidth=2, alpha=0.9)
+                          color='#FFB6C1',  # Light pink/red
+                          edgecolor=NHS_COLORS_HEX['nhs_dark_grey'], linewidth=2)
 
     # Add value labels on each segment
     for i, (closed, ongoing) in enumerate(zip(monthly_status['Yes'], monthly_status['Ongoing'])):
         total = closed + ongoing
         # Total on top
         ax.text(i, total + 0.5, f'{int(total)}', ha='center', va='bottom',
-                fontweight='bold', fontsize=10)
+                fontweight='bold', fontsize=10, color=NHS_COLORS_HEX['nhs_black'])
         # Closed count (if significant)
         if closed > 0:
             ax.text(i, closed/2, f'{int(closed)}', ha='center', va='center',
-                    fontsize=8, color='white', fontweight='bold')
+                    fontsize=9, color=NHS_COLORS_HEX['nhs_black'], fontweight='bold')
         # Ongoing count (if significant)
         if ongoing > 0:
             ax.text(i, closed + ongoing/2, f'{int(ongoing)}', ha='center', va='center',
-                    fontsize=8, color='white', fontweight='bold')
+                    fontsize=9, color=NHS_COLORS_HEX['nhs_black'], fontweight='bold')
 
     # Styling
     ax.set_xticks(x_pos)
@@ -643,9 +643,9 @@ def create_complexity_donut_chart(complexity_dist):
     fig, ax = plt.subplots(figsize=(6, 4))
     fig.patch.set_facecolor('white')
 
-    # Define expected categories
+    # Define expected categories with SUBTLE PASTEL colors matching slides 8/9/10
     categories = ['Basic', 'Regular', 'Complex']
-    colors = [NHS_COLORS_HEX['nhs_green'], NHS_COLORS_HEX['nhs_warm_yellow'], NHS_COLORS_HEX['nhs_dark_red']]
+    colors = ['#90EE90', '#FFE87C', '#FFB6C1']  # Light green, light yellow, light pink/red
 
     values = [complexity_dist.get(cat, 0) for cat in categories]
     total = sum(values)
@@ -656,16 +656,16 @@ def create_complexity_donut_chart(complexity_dist):
         plt.tight_layout()
         return fig
 
-    # Create donut
+    # Create donut with darker borders for definition
     wedges, texts, autotexts = ax.pie(values, labels=categories, colors=colors,
                                        autopct='%1.0f%%', startangle=90,
                                        pctdistance=0.85,
-                                       wedgeprops=dict(width=0.4, edgecolor='white', linewidth=2))
+                                       wedgeprops=dict(width=0.4, edgecolor=NHS_COLORS_HEX['nhs_dark_grey'], linewidth=3))
 
     for autotext in autotexts:
-        autotext.set_color('white')
+        autotext.set_color(NHS_COLORS_HEX['nhs_black'])  # Dark text on light background
         autotext.set_fontweight('bold')
-        autotext.set_fontsize(11)
+        autotext.set_fontsize(12)
 
     # Center text
     ax.text(0, 0, f'{total}\nCases', ha='center', va='center',
@@ -757,30 +757,33 @@ def create_response_time_chart(all_hpeg_metrics, current_hpeg_name):
         for comp in complexities:
             compliance_data[comp].append(targets_met.get(comp, 0))
 
-    # Create grouped bars
+    # Create grouped bars with SUBTLE PASTEL colors matching slides 8/9/10
     x_pos2 = np.arange(len(hpeg_labels))
     width2 = 0.25
-    colors_complex = [NHS_COLORS_HEX['nhs_green'], NHS_COLORS_HEX['nhs_warm_yellow'],
-                      NHS_COLORS_HEX['nhs_dark_red']]
+    colors_complex = ['#90EE90', '#FFE87C', '#FFB6C1']  # Light green, light yellow, light pink/red
 
     for idx, (comp, color) in enumerate(zip(complexities, colors_complex)):
         offset = (idx - 1) * width2
         values = compliance_data[comp]
-        # Highlight current HPEG with darker shade
-        bar_colors = [color if i != current_idx else color for i in range(len(hpeg_labels))]
-        alphas = [0.9 if i == current_idx else 0.6 for i in range(len(hpeg_labels))]
+        # All bars same color, darker border for current HPEG
+        bar_colors = [color for i in range(len(hpeg_labels))]
+        border_colors = [NHS_COLORS_HEX['nhs_black'] if i == current_idx else NHS_COLORS_HEX['nhs_mid_grey']
+                         for i in range(len(hpeg_labels))]
+        border_widths = [3 if i == current_idx else 1.5 for i in range(len(hpeg_labels))]
 
         bars = ax2.bar(x_pos2 + offset, values, width2, label=f'{comp} ({targets[idx]}d)',
-                      color=bar_colors, edgecolor='white', linewidth=1.5)
+                      color=bar_colors)
 
-        # Apply individual alphas and add value labels
-        for i, (bar, alpha, val) in enumerate(zip(bars, alphas, values)):
-            bar.set_alpha(alpha)
+        # Apply individual border styling and add value labels
+        for i, (bar, val) in enumerate(zip(bars, values)):
+            bar.set_edgecolor(border_colors[i])
+            bar.set_linewidth(border_widths[i])
             # Add label if value > 0 (only show percentages where there's data)
             if val > 0:
                 ax2.text(bar.get_x() + bar.get_width()/2, val + 2,
                         f'{val:.0f}%', ha='center', va='bottom',
-                        fontsize=7, fontweight='bold' if i == current_idx else 'normal')
+                        fontsize=8, fontweight='bold' if i == current_idx else 'normal',
+                        color=NHS_COLORS_HEX['nhs_black'])
 
     # Styling for right chart
     ax2.set_xticks(x_pos2)
@@ -2073,6 +2076,11 @@ def create_slide_resolution_complexity_distribution(prs, hpeg_name, metrics, tem
 
         add_text_box(slide, f"Overall: {total_cases} total cases • {overall_compliance:.1f}% overall compliance",
                     left=0.8, top=6.3, width=11.7, height=0.4, font_size=12, bold=True,
+                    color_rgb=NHS_COLORS_RGB['nhs_mid_grey'], alignment=PP_ALIGN.CENTER)
+
+        # Add targets footer text
+        add_text_box(slide, "Targets: Basic=25d, Regular=40d, Complex=65d",
+                    left=0.8, top=6.8, width=11.7, height=0.3, font_size=10,
                     color_rgb=NHS_COLORS_RGB['nhs_mid_grey'], alignment=PP_ALIGN.CENTER)
     else:
         add_text_box(slide, "No resolution time data available for current period",
