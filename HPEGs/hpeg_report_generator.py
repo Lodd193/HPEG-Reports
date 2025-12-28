@@ -283,17 +283,17 @@ def create_6month_trend_chart(df_current, df_previous, hpeg_name):
     # Add value labels on each segment
     for i, (closed, ongoing) in enumerate(zip(monthly_status['Yes'], monthly_status['Ongoing'])):
         total = closed + ongoing
-        # Total on top
+        # Total on top (black on white background)
         ax.text(i, total + 0.5, f'{int(total)}', ha='center', va='bottom',
                 fontweight='bold', fontsize=10, color=NHS_COLORS_HEX['nhs_black'])
-        # Closed count (if significant)
+        # Closed count (white on dark green)
         if closed > 0:
             ax.text(i, closed/2, f'{int(closed)}', ha='center', va='center',
-                    fontsize=9, color=NHS_COLORS_HEX['nhs_black'], fontweight='bold')
-        # Ongoing count (if significant)
+                    fontsize=9, color='white', fontweight='bold')
+        # Ongoing count (white on dark pink)
         if ongoing > 0:
             ax.text(i, closed + ongoing/2, f'{int(ongoing)}', ha='center', va='center',
-                    fontsize=9, color=NHS_COLORS_HEX['nhs_black'], fontweight='bold')
+                    fontsize=9, color='white', fontweight='bold')
 
     # Styling
     ax.set_xticks(x_pos)
@@ -663,7 +663,7 @@ def create_complexity_donut_chart(complexity_dist):
                                        wedgeprops=dict(width=0.4, edgecolor=NHS_COLORS_HEX['nhs_dark_grey'], linewidth=3))
 
     for autotext in autotexts:
-        autotext.set_color(NHS_COLORS_HEX['nhs_black'])  # Dark text on light background
+        autotext.set_color('white')  # White text on dark NHS colors for readability
         autotext.set_fontweight('bold')
         autotext.set_fontsize(12)
 
