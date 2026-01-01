@@ -1396,13 +1396,12 @@ def calculate_topic_priorities(hpeg_performance: dict, trust_avg_dist: np.ndarra
             priority_level = "MAINTAIN"
             priority_color = "#009639"  # NHS Green
 
-        # Generate recommendation
-        if priority_level == "CRITICAL":
-            recommendation = f"Immediate review of {topic['topic_label']} processes"
-        elif priority_level == "MONITOR":
-            recommendation = f"Monitor {topic['topic_label']} trends and consider preventive action"
-        else:
-            recommendation = f"Continue current approach for {topic['topic_label']}"
+        # Recommendation will be generated in Phase 4
+        recommendation = None
+        action_timeline = None
+        action_steps = []
+        success_metric = None
+
 
         # PHASE 2: Extract team ownership (top specialties/CDGs for "who should own this")
         primary_lead = "HPEG Lead"  # Default
@@ -1448,6 +1447,69 @@ def calculate_topic_priorities(hpeg_performance: dict, trust_avg_dist: np.ndarra
                             example_count += 1
 
 
+        # PHASE 4: Generate template-based action plan with specific timelines
+
+        # Determine affected teams string for templates
+        affected_teams = primary_lead
+        if len(secondary_leads) > 0:
+            other_teams = ', '.join([team[0] for team in secondary_leads[:2]])
+            affected_teams = f"{primary_lead} (also {other_teams})"
+
+        # Topic area string (cleaned topic label)
+        topic_area = topic['topic_label'].lower()
+
+        if priority_level == "CRITICAL":
+            action_timeline = "7 days"
+            sample_count = example_count if example_count > 0 else 'sample'
+
+            action_steps = [
+                f"Week 1: {primary_lead} to review {sample_count} complaints",
+                f"Week 1: Schedule root cause meeting with {primary_lead}",
+                f"Week 2: Identify process gaps in {topic_area}",
+                f"Week 2: Implement immediate corrective actions"
+            ]
+
+            success_metric = "Reduce by 50% in 3 months"
+
+            # Build recommendation
+            rec_parts = [f"IMMEDIATE ACTION REQUIRED (Complete within {action_timeline}):"]
+            rec_parts.extend([f"- {step}" for step in action_steps])
+            rec_parts.append(f"\nTarget: {success_metric}")
+            recommendation = "\n".join(rec_parts)
+
+        elif priority_level == "MONITOR":
+            action_timeline = "14 days"
+
+            action_steps = [
+                f"Week 1-2: {primary_lead} to monitor weekly trend",
+                f"Week 2: Review current processes in {topic_area}",
+                f"Week 2: Consider preventive improvements if trend continues"
+            ]
+
+            success_metric = "Prevent escalation to CRITICAL"
+
+            # Build recommendation
+            rec_parts = [f"MONITORING PLAN (Complete within {action_timeline}):"]
+            rec_parts.extend([f"- {step}" for step in action_steps])
+            rec_parts.append(f"\nTarget: {success_metric}")
+            recommendation = "\n".join(rec_parts)
+
+        else:  # MAINTAIN
+            action_timeline = "Ongoing"
+
+            action_steps = [
+                f"{topic_area.capitalize()} performing within acceptable range",
+                f"Maintain current processes in {affected_teams}",
+                f"Monitor for any emerging patterns"
+            ]
+
+            success_metric = "Maintain current performance"
+
+            # Build recommendation
+            rec_parts = ["CONTINUE CURRENT APPROACH:"]
+            rec_parts.extend([f"- {step}" for step in action_steps])
+            recommendation = "\n".join(rec_parts)
+
         # PHASE 1: Calculate trend vs previous period
         absolute_count = topic.get('complaint_count', 0)
         previous_count = 0
@@ -1487,7 +1549,14 @@ def calculate_topic_priorities(hpeg_performance: dict, trust_avg_dist: np.ndarra
             'example_count': example_count,            # PHASE 3: Count for display logic
             'primary_lead': primary_lead,              # PHASE 2: Who should own this
             'primary_lead_pct': primary_lead_pct,      # PHASE 2: % of complaints from primary
-            'secondary_leads': secondary_leads         # PHASE 2: Other affected teams
+            'secondary_leads': secondary_leads,        # PHASE 2: Other affected teams
+            'absolute_count': absolute_count,          # PHASE 1: Total complaints this period
+            'previous_count': previous_count,          # PHASE 1: Total complaints previous period
+            'trend_percentage': trend_percentage,      # PHASE 1: % change vs previous
+            'trend_direction': trend_direction,        # PHASE 1: ↑ ↓ → indicator
+            'action_timeline': action_timeline,        # PHASE 4: Time window for action
+            'action_steps': action_steps,              # PHASE 4: Specific action steps
+            'success_metric': success_metric           # PHASE 4: Target outcome
         })
 
     # Sort by priority score descending
