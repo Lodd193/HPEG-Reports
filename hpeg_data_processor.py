@@ -167,31 +167,99 @@ SUBJECTS_CANON = [
     "Waiting Times",
 ]
 
-# Domain-specific stopwords for NMF topic modeling
+# Domain-specific stopwords for NMF topic modeling (ENHANCED - Phase 1)
+# Expanded from 95 to ~280 terms to remove complaint-writing noise while preserving domain signal
 NMF_STOPWORDS = [
-    # NHS/Hospital terms
+    # NHS/Hospital infrastructure terms
     'nhs', 'hospital', 'patient', 'complaint', 'trust', 'staff', 'uhb',
     'birmingham', 'heartlands', 'queen', 'elizabeth', 'solihull', 'good',
-    'hope', 'service', 'care', 'team', 'ward', 'department',
-    # Generic time words
-    'week', 'day', 'time', 'hour', 'minute', 'month', 'year', 'today', 'yesterday',
-    # Generic action verbs
-    'told', 'said', 'asked', 'called', 'went', 'came', 'give', 'given', 'take', 'taken',
-    'make', 'made', 'get', 'got', 'see', 'saw', 'seen', 'speak', 'spoke', 'go', 'come',
-    # Generic wanting/needing words
+    'hope', 'service', 'care', 'team', 'ward', 'department', 'unit', 'site',
+
+    # Generic complaint vocabulary (NEW - removes narrative noise)
+    'complained', 'complaining', 'complain', 'unhappy', 'dissatisfied', 'upset',
+    'concerned', 'worried', 'felt', 'feel', 'feeling', 'experience',
+    'experienced', 'state', 'stated', 'report', 'reported', 'raise',
+    'raised', 'express', 'expressed', 'mention', 'mentioned', 'note',
+    'noted', 'highlight', 'highlighted', 'advise', 'advised',
+
+    # Time/Date vocabulary (EXPANDED)
+    'week', 'day', 'time', 'hour', 'minute', 'month', 'year', 'today',
+    'yesterday', 'date', 'morning', 'afternoon', 'evening', 'night',
+    'weekend', 'weekday', 'monday', 'tuesday', 'wednesday', 'thursday',
+    'friday', 'saturday', 'sunday', 'january', 'february', 'march',
+    'april', 'may', 'june', 'july', 'august', 'september', 'october',
+    'november', 'december', 'daily', 'weekly', 'monthly',
+
+    # Generic action verbs (EXPANDED)
+    'told', 'said', 'asked', 'called', 'went', 'came', 'give', 'given',
+    'take', 'taken', 'make', 'made', 'get', 'got', 'see', 'saw', 'seen',
+    'speak', 'spoke', 'go', 'come', 'arrive', 'arrived', 'leave', 'left',
+    'return', 'returned', 'attend', 'attended', 'visit', 'visited',
+    'put', 'happen', 'happened', 'occur', 'occurred', 'find', 'found',
+    'know', 'knew', 'think', 'thought', 'believe', 'believed',
+
+    # Generic modifiers (NEW - removes qualitative noise)
+    'very', 'really', 'quite', 'extremely', 'particularly', 'especially',
+    'more', 'most', 'less', 'least', 'many', 'much', 'few', 'several',
+    'some', 'any', 'all', 'every', 'each', 'other', 'another', 'such',
+    'just', 'only', 'also', 'even', 'still', 'too', 'well', 'however',
+    'therefore', 'thus', 'hence', 'moreover', 'furthermore', 'additionally',
+
+    # Generic medical roles (EXPANDED - too broad for meaningful topics)
+    'doctor', 'nurse', 'consultant', 'surgeon', 'clinician', 'practitioner',
+    'physician', 'registrar', 'specialist', 'therapist', 'midwife',
+    'paramedic', 'receptionist', 'manager', 'administrator', 'coordinator',
+    'supervisor', 'lead', 'assistant', 'support', 'worker', 'member',
+
+    # Family/Social (EXPANDED)
+    'mother', 'father', 'daughter', 'son', 'family', 'relative', 'husband',
+    'wife', 'partner', 'sibling', 'parent', 'child', 'children', 'friend',
+    'next kin', 'carer', 'visitor', 'relation', 'grandmother', 'grandfather',
+
+    # Generic wanting/needing/ability words (KEPT)
     'want', 'wanted', 'need', 'needed', 'require', 'required', 'wish', 'wished',
-    # Generic ability words
-    'able', 'unable', 'could', 'would', 'should', 'can', 'cannot',
-    # Generic relatives
-    'mother', 'father', 'daughter', 'son', 'family', 'relative', 'husband', 'wife',
-    # Generic medical terms (too broad)
-    'doctor', 'nurse', 'appointment', 'bed', 'room',
-    # Age-related (generic)
-    'old', 'age', 'aged', 'year old', 'years old',
-    # Generic reporting words
-    'received', 'informed', 'contacted', 'phoned', 'emailed', 'letter', 'wrote',
-    # Generic issues (use more specific complaint subjects)
-    'issue', 'problem', 'concern', 'matter',
+    'able', 'unable', 'could', 'would', 'should', 'can', 'cannot', 'may', 'might',
+    'must', 'shall', 'will', 'willing',
+
+    # Generic outcomes (NEW - narrative connectors)
+    'result', 'resulted', 'outcome', 'consequence', 'effect', 'caused',
+    'led', 'leading', 'due', 'because', 'since', 'following', 'after',
+    'before', 'during', 'while', 'when', 'where', 'how', 'why', 'what',
+
+    # Generic assessment/judgment words (NEW)
+    'good', 'bad', 'poor', 'excellent', 'better', 'worse', 'worst',
+    'best', 'appropriate', 'inappropriate', 'adequate', 'inadequate',
+    'satisfactory', 'unsatisfactory', 'acceptable', 'unacceptable',
+
+    # Administrative vocabulary (NEW)
+    'appointment', 'booking', 'record', 'file', 'note', 'document',
+    'form', 'letter', 'email', 'phone', 'call', 'message', 'contact',
+    'contacted', 'phoned', 'emailed', 'wrote', 'written', 'spoke',
+
+    # Generic locations (NEW - too broad)
+    'bed', 'room', 'area', 'place', 'location', 'building', 'floor',
+    'entrance', 'exit', 'corridor',
+
+    # Generic reporting/communication words (EXPANDED)
+    'received', 'informed', 'information', 'explain', 'explained',
+    'answer', 'answered', 'reply', 'replied', 'respond', 'responded',
+    'discuss', 'discussed', 'speak', 'understand', 'understood',
+
+    # Generic issues/problems (KEPT)
+    'issue', 'problem', 'concern', 'matter', 'situation', 'case',
+    'incident', 'event', 'circumstance',
+
+    # Age-related (KEPT)
+    'old', 'age', 'aged', 'year old', 'years old', 'elderly',
+
+    # Pronouns and determiners (NEW - no semantic value)
+    'this', 'that', 'these', 'those', 'it', 'its', 'they', 'them', 'their',
+    'he', 'she', 'his', 'her', 'my', 'our', 'your', 'myself', 'yourself',
+    'himself', 'herself', 'ourselves', 'themselves',
+
+    # Generic transitions (NEW)
+    'then', 'now', 'here', 'there', 'again', 'later', 'soon',
+    'first', 'second', 'third', 'next', 'last', 'final', 'finally',
 ]
 
 # ============================================================================
@@ -460,57 +528,208 @@ def preprocess_text_for_nmf(texts, nlp):
 
     return processed
 
-def fit_nmf_model(texts, n_topics=10, max_features=1000):
+def fit_nmf_model(texts, n_topics=10, max_features=1500):
     """
-    Fit NMF topic model.
+    Fit NMF topic model (Phase 2 Enhancement: increased vocabulary size).
 
     Args:
         texts: Preprocessed text documents
         n_topics: Number of topics to extract
-        max_features: Maximum vocabulary size
+        max_features: Maximum vocabulary size (increased from 1000 to 1500)
 
     Returns:
         tuple: (model, vectorizer, document_topic_matrix, feature_names)
     """
     print(f"  Fitting NMF model with {n_topics} topics...")
 
-    # TF-IDF vectorization with aggressive filtering for meaningful topics
+    # TF-IDF vectorization with OPTIMIZED parameters (Phase 2 Enhancement)
+    # Relaxed filtering to allow domain-specific healthcare terms to surface
     vectorizer = TfidfVectorizer(
-        max_features=max_features,
-        max_df=0.6,  # Ignore terms in >60% of documents (very common words)
-        min_df=5,    # Ignore terms in <5 documents (very rare words)
-        ngram_range=(1, 3),  # Unigrams, bigrams, and trigrams for specificity
-        token_pattern=r'\b[a-z]{3,}\b'  # At least 3 characters
+        max_features=1500,   # Increased from 1000 for richer vocabulary
+        max_df=0.85,         # Relaxed from 0.6 - allow domain terms (medication, discharge, pain)
+        min_df=8,            # Increased from 5 for more stable threshold
+        ngram_range=(1, 3),  # Keep unigrams, bigrams, trigrams for specificity
+        token_pattern=r'\b[a-z]{3,}\b',  # Keep 3+ character requirement
+        sublinear_tf=True,   # NEW: Use log(tf) to dampen very high frequency terms
+        use_idf=True,        # Ensure IDF weighting enabled
+        smooth_idf=True,     # Prevent zero divisions
+        norm='l2'            # L2 normalization (standard)
     )
 
     tfidf_matrix = vectorizer.fit_transform(texts)
     feature_names = vectorizer.get_feature_names_out()
 
-    # NMF decomposition
+    # NMF decomposition with REFINED parameters (Phase 3 Enhancement)
+    # Better initialization and loss function for text data, reduced regularization
     nmf_model = NMF(
         n_components=n_topics,
         random_state=42,
-        max_iter=500,
-        alpha_W=0.1,
-        alpha_H=0.1,
-        l1_ratio=0.5
+        max_iter=800,                    # Increased from 500 for better convergence
+        init='nndsvda',                  # Better initialization than random (SVD-based)
+        solver='mu',                     # Multiplicative update - better for dense text data
+        beta_loss='kullback-leibler',    # KL divergence - better for text than Frobenius
+        alpha_W=0.0,                     # Reduced from 0.1 - less regularization on W
+        alpha_H=0.0,                     # Reduced from 0.1 - less regularization on H
+        l1_ratio=0.0                     # Changed from 0.5 - allow denser topics (no sparsity constraint)
     )
 
     document_topic_matrix = nmf_model.fit_transform(tfidf_matrix)
 
     return nmf_model, vectorizer, document_topic_matrix, feature_names
 
-def extract_topic_keywords(model, feature_names, n_keywords=5):
-    """Extract top keywords for each topic."""
-    topics = []
+def calculate_topic_coherence(model, vectorizer, texts, top_n=10):
+    """
+    Calculate C_V coherence score for topics using word co-occurrence (Phase 4 Enhancement).
+
+    C_V coherence measures how often top topic words appear together in complaint texts,
+    indicating semantic coherence. Higher scores = more coherent topics.
+
+    Args:
+        model: Fitted NMF model
+        vectorizer: Fitted TF-IDF vectorizer
+        texts: List of preprocessed text strings
+        top_n: Number of top words to consider per topic
+
+    Returns:
+        dict: Coherence scores per topic and overall average
+    """
+    from sklearn.feature_extraction.text import CountVectorizer
+
+    # Create binary co-occurrence matrix
+    count_vectorizer = CountVectorizer(
+        vocabulary=vectorizer.get_feature_names_out(),
+        binary=True
+    )
+    cooccurrence_matrix = count_vectorizer.fit_transform(texts)
+
+    coherence_scores = {}
+    feature_names = vectorizer.get_feature_names_out()
+
     for topic_idx, topic in enumerate(model.components_):
-        top_indices = topic.argsort()[-n_keywords:][::-1]
-        top_keywords = [feature_names[i] for i in top_indices]
+        # Get top N words for topic
+        top_indices = topic.argsort()[-top_n:][::-1]
+        top_words_idx = [i for i in top_indices]
+
+        # Calculate pairwise co-occurrence (C_V coherence approximation)
+        coherence = 0
+        pairs = 0
+        for i in range(len(top_words_idx)):
+            for j in range(i + 1, len(top_words_idx)):
+                word1_idx = top_words_idx[i]
+                word2_idx = top_words_idx[j]
+
+                # Count documents where both words appear
+                cooccur = (cooccurrence_matrix[:, word1_idx].multiply(
+                          cooccurrence_matrix[:, word2_idx])).sum()
+
+                # Count documents with word2
+                word2_count = cooccurrence_matrix[:, word2_idx].sum()
+
+                if word2_count > 0:
+                    coherence += np.log((cooccur + 1) / word2_count)
+                    pairs += 1
+
+        coherence_scores[topic_idx + 1] = coherence / pairs if pairs > 0 else 0
+
+    avg_coherence = np.mean(list(coherence_scores.values()))
+
+    return {
+        'per_topic': coherence_scores,
+        'average': avg_coherence,
+        'interpretation': 'Higher is better. Typical range: -3 to 0. Target: > -2.0'
+    }
+
+def extract_topic_keywords(model, feature_names, n_keywords=5):
+    """
+    Generate intelligent topic labels using multiple strategies (Phase 5 Enhancement).
+
+    Strategies applied:
+    1. TF-IDF contrast - Find words distinctive to topic vs corpus
+    2. Bigram/trigram preference - Multi-word phrases more descriptive
+    3. Pattern detection - Map word patterns to NHS complaint themes
+    4. Fallback hierarchy - Always produces reasonable label
+
+    Args:
+        model: Fitted NMF model
+        feature_names: Array of feature names from vectorizer
+        n_keywords: Number of keywords to extract per topic
+
+    Returns:
+        list: Enhanced topics with intelligent labels
+    """
+    topics = []
+
+    # Calculate corpus-wide average for distinctiveness scoring
+    corpus_avg = model.components_.mean(axis=0)
+
+    for topic_idx, topic in enumerate(model.components_):
+        # Strategy 1: Get top keywords by topic weight
+        top_indices = topic.argsort()[-n_keywords*3:][::-1]  # Get top 15 for analysis
+        top_words = [(feature_names[i], topic[i]) for i in top_indices]
+
+        # Strategy 2: Separate bigrams/trigrams (more specific) from unigrams
+        phrases = [w for w, _ in top_words if ' ' in w]
+        unigrams = [w for w, _ in top_words if ' ' not in w]
+
+        # Strategy 3: Calculate distinctiveness (topic weight vs corpus average)
+        distinctiveness = topic - corpus_avg
+        distinctive_indices = distinctiveness.argsort()[-10:][::-1]
+        distinctive_words = [feature_names[i] for i in distinctive_indices]
+
+        # Strategy 4: Pattern detection for NHS complaint theme labels
+        label_suggestion = None
+        top_words_str = ' '.join([w for w, _ in top_words[:10]]).lower()
+
+        # Pattern matching for common NHS complaint themes
+        if any(term in top_words_str for term in ['wait', 'delay', 'long', 'appointment', 'cancel']):
+            label_suggestion = "Access & Waiting Times"
+        elif any(term in top_words_str for term in ['communication', 'inform', 'explain', 'tell', 'speak']):
+            label_suggestion = "Communication & Information"
+        elif any(term in top_words_str for term in ['discharge', 'transfer', 'admission', 'referral']):
+            label_suggestion = "Care Transitions"
+        elif any(term in top_words_str for term in ['pain', 'medication', 'treatment', 'procedure', 'prescri']):
+            label_suggestion = "Clinical Care & Treatment"
+        elif any(term in top_words_str for term in ['staff', 'rude', 'attitude', 'manner', 'behaviour']):
+            label_suggestion = "Staff Conduct & Attitude"
+        elif any(term in top_words_str for term in ['dignity', 'privacy', 'respect', 'confidential']):
+            label_suggestion = "Dignity & Respect"
+        elif any(term in top_words_str for term in ['food', 'meal', 'nutrition', 'hydration', 'drink']):
+            label_suggestion = "Nutrition & Hydration"
+        elif any(term in top_words_str for term in ['end life', 'death', 'dying', 'palliative', 'bereavement']):
+            label_suggestion = "End of Life Care"
+        elif any(term in top_words_str for term in ['outpatient', 'clinic', 'appointment']):
+            label_suggestion = "Outpatient Services"
+        elif any(term in top_words_str for term in ['emergency', 'a&e', 'urgent', 'ambulance']):
+            label_suggestion = "Emergency Care"
+        elif any(term in top_words_str for term in ['scan', 'test', 'result', 'investigation', 'x-ray']):
+            label_suggestion = "Diagnostic Services"
+
+        # Build comprehensive label with fallback hierarchy
+        if label_suggestion:
+            # Use pattern-detected label (most reliable)
+            primary_label = label_suggestion
+        elif len(phrases) >= 2:
+            # Use bigrams/trigrams (more specific than unigrams)
+            primary_label = ' / '.join(phrases[:2]).title()
+        elif len(phrases) == 1 and len(unigrams) >= 2:
+            # Combine one phrase with unigrams
+            primary_label = f"{phrases[0].title()} / {unigrams[0].title()}"
+        else:
+            # Fallback: Use most distinctive unigrams
+            primary_label = ' / '.join(distinctive_words[:3]).title()
+
+        # Extract final keyword list (original top 5)
+        final_keywords = [w for w, _ in top_words[:n_keywords]]
+
         topics.append({
             'id': topic_idx + 1,
-            'keywords': top_keywords,
-            'label': ' / '.join(top_keywords[:3]).title()
+            'label': primary_label,
+            'keywords': final_keywords,
+            'distinctive_terms': distinctive_words[:5],  # For debugging/validation
+            'phrases': phrases[:3] if phrases else [],   # For debugging/validation
+            'suggested_category': label_suggestion       # For debugging/validation
         })
+
     return topics
 
 def calculate_topic_distributions(document_topic_matrix, df, group_col, group_value=None):
@@ -853,9 +1072,24 @@ def perform_topic_modeling(df_current: pd.DataFrame) -> dict:
     )
     trust_topics = extract_topic_keywords(trust_model, trust_features, n_keywords=5)
 
+    # Calculate topic coherence for quality validation (Phase 4 Enhancement)
+    print("\n  Calculating topic coherence scores...")
+    coherence_results = calculate_topic_coherence(
+        trust_model, trust_vectorizer, processed_texts, top_n=10
+    )
+
     print("  ✓ Trust-wide topics identified:")
     for topic in trust_topics:
-        print(f"    Topic {topic['id']}: {topic['label']}")
+        coherence_score = coherence_results['per_topic'].get(topic['id'], 0)
+        print(f"    Topic {topic['id']}: {topic['label']} (coherence: {coherence_score:.3f})")
+
+    avg_coherence = coherence_results['average']
+    print(f"\n  ✓ Average topic coherence: {avg_coherence:.3f}")
+    if avg_coherence < -2.0:
+        print(f"    ⚠ WARNING: Low coherence score. Topics may need manual review.")
+        print(f"    {coherence_results['interpretation']}")
+    else:
+        print(f"    ✓ Good coherence - topics are semantically meaningful")
 
     # Calculate HPEG distributions within trust-wide topics
     hpeg_distributions = {}

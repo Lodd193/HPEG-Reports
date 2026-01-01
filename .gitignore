@@ -1,0 +1,11 @@
+node_modules
+
+# User-specific config files
+.bash_history
+.claude.json*
+.condarc
+.gitconfig
+
+# Generated data and outputs
+processed_data.pkl
+qa_analysis_report.json
