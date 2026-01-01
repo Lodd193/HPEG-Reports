@@ -498,6 +498,126 @@ def add_six_months_flag(df: pd.DataFrame, report_date: pd.Timestamp) -> pd.DataF
 # NMF TOPIC MODELING
 # ============================================================================
 
+def anonymize_complaint_for_display(description: str, max_length: int = 100) -> str:
+    """
+    Create anonymized, action-focused summary suitable for Slide 7 display (Phase 3 Enhancement).
+
+    NHS Data Governance Compliant - removes all patient identifiers while preserving
+    actionable service issues for site leads.
+
+    PII Removal:
+    - Patient/staff names (titles + proper nouns)
+    - Dates and times (specific dd/mm/yyyy, days of week)
+    - Ages (specific years)
+    - Ward/room numbers
+    - Clinical procedure specifics (generalized to categories)
+
+    Keeps:
+    - Actionable service issues (delays, communication gaps)
+    - General timeframes (hours, days - not specific dates)
+    - Service quality problems
+
+    Args:
+        description: Raw complaint text (may contain PII)
+        max_length: Maximum character length for slide display (default 100)
+
+    Returns:
+        Anonymized summary suitable for executive presentation
+
+    Examples:
+        Input:  "Mrs. Smith attended Ward 4B on 15/03/2025 at 14:30 with Dr. Jones.
+                 She was not informed about her scan results for 6 days."
+        Output: "Patient not informed of diagnostic test results for 6 days"
+
+        Input:  "84 year old male waited 4 hours in A&E with no updates."
+        Output: "Patient waited 4 hours with no communication about delay"
+    """
+    import re
+
+    if not description or not isinstance(description, str):
+        return ""
+
+    text = description
+
+    # Remove titles and names (Mr/Mrs/Dr + capitalized words)
+    text = re.sub(r'\b(Mr|Mrs|Ms|Miss|Dr|Prof|Sir|Dame|Nurse|Sister|Consultant)\.?\s+[A-Z][a-z]+', '[Patient]', text)
+    text = re.sub(r'\b[A-Z][a-z]+\s+[A-Z][a-z]+\b', '[Name]', text)  # Proper nouns (likely names)
+
+    # Remove dates (various formats)
+    text = re.sub(r'\d{1,2}[/-]\d{1,2}[/-]\d{2,4}', '[Date]', text)
+    text = re.sub(r'\b(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|January|February|March|April|May|June|July|August|September|October|November|December)\b', '[Day]', text, flags=re.IGNORECASE)
+
+    # Remove times
+    text = re.sub(r'\d{1,2}:\d{2}\s*(am|pm|AM|PM)?', '[Time]', text)
+
+    # Remove specific ages
+    text = re.sub(r'\b\d{1,3}\s*years?\s*old\b', 'patient', text, flags=re.IGNORECASE)
+
+    # Remove specific ward/room/bay numbers
+    text = re.sub(r'\b(Ward|Room|Bay)\s+\d+[A-Z]?\b', 'ward', text, flags=re.IGNORECASE)
+
+    # Generalize clinical procedures (keep general category for context)
+    clinical_generalizations = {
+        r'\bechocardiogram\b': 'diagnostic test',
+        r'\bMRI\s*scan\b': 'diagnostic scan',
+        r'\bCT\s*scan\b': 'diagnostic scan',
+        r'\bblood\s*test\b': 'test',
+        r'\bX-ray\b': 'diagnostic imaging',
+        r'\bultrasound\b': 'diagnostic imaging',
+        r'\bendoscopy\b': 'procedure',
+        r'\bcolonoscopy\b': 'procedure',
+        r'\bbiopsy\b': 'test',
+    }
+    for pattern, replacement in clinical_generalizations.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+
+    # Extract actionable service issue sentences
+    # Focus on key complaint keywords that indicate service problems
+    action_keywords = [
+        'delay', 'delayed', 'not informed', 'not told', 'did not inform',
+        'wait', 'waited', 'waiting', 'wrong', 'incorrect', 'error',
+        'missed', 'missing', 'no communication', 'lack of communication',
+        'not explained', 'did not explain', 'lack of', 'failed to',
+        'no update', 'not contacted', 'ignored', 'dismissed'
+    ]
+
+    # Split into sentences
+    sentences = text.split('.')
+
+    # Find sentences with actionable keywords
+    actionable_sentences = []
+    for sent in sentences:
+        sent_lower = sent.lower()
+        if any(keyword in sent_lower for keyword in action_keywords):
+            actionable_sentences.append(sent.strip())
+
+    # Use actionable sentences if found, otherwise first 2 sentences
+    if actionable_sentences:
+        summary = '. '.join(actionable_sentences[:2])  # Max 2 actionable sentences
+    else:
+        summary = '. '.join([s.strip() for s in sentences[:2] if s.strip()])  # Fallback
+
+    # Clean up placeholder artifacts
+    summary = summary.replace('[Patient]', 'Patient')
+    summary = summary.replace('[Name]', '')
+    summary = summary.replace('[Date]', '')
+    summary = summary.replace('[Time]', '')
+    summary = summary.replace('[Day]', '')
+
+    # Remove multiple spaces
+    summary = re.sub(r'\s+', ' ', summary)
+    summary = summary.strip()
+
+    # Ensure sentence ends with period
+    if summary and not summary.endswith('.'):
+        summary += '.'
+
+    # Truncate to max_length if needed
+    if len(summary) > max_length:
+        summary = summary[:max_length-3] + '...'
+
+    return summary
+
 def preprocess_text_for_nmf(texts, nlp):
     """
     Preprocess complaint descriptions for NMF topic modeling.
@@ -1211,15 +1331,23 @@ def analyze_topic_performance(df_current: pd.DataFrame, doc_topics: np.ndarray, 
 
     return topic_performance
 
-def calculate_topic_priorities(hpeg_performance: dict, trust_avg_dist: np.ndarray) -> list:
+def calculate_topic_priorities(hpeg_performance: dict, trust_avg_dist: np.ndarray, df_hpeg: pd.DataFrame = None) -> list:
     """
-    Calculate priority scores for topics based on deviation and performance.
+    Calculate priority scores for topics with actionable details (ENHANCED).
 
     Priority = (Deviation from trust * 0.5) + (Resolution time percentile * 0.5)
 
+    PHASE 3 Enhancement: Extracts anonymized complaint examples for actionability
+
+    Args:
+        hpeg_performance: Dict with topic_distribution and topic_performance
+        trust_avg_dist: Trust-wide average topic distribution
+        df_hpeg: HPEG-specific dataframe with complaint details (for examples)
+
     Returns:
         list: Priority-ranked topics (descending by score) with actionable recommendations.
-              Each topic dict includes priority_score, priority_level, priority_color, and recommendation.
+              Each topic dict includes priority_score, priority_level, priority_color, recommendation,
+              and anonymized example complaints (Phase 3).
     """
     print("\n  Calculating topic priorities...")
 
@@ -1270,6 +1398,49 @@ def calculate_topic_priorities(hpeg_performance: dict, trust_avg_dist: np.ndarra
         else:
             recommendation = f"Continue current approach for {topic['topic_label']}"
 
+        # PHASE 2: Extract team ownership (top specialties/CDGs for "who should own this")
+        primary_lead = "HPEG Lead"  # Default
+        primary_lead_pct = 0.0
+        secondary_leads = []
+
+        top_specialties = topic.get('top_specialties', [])
+        if len(top_specialties) > 0:
+            # Primary lead is top specialty
+            top_spec = top_specialties[0]
+            total_count = topic.get('complaint_count', 0)
+            primary_lead = f"{top_spec['specialty']} Lead"
+            primary_lead_pct = (top_spec['count'] / total_count * 100) if total_count > 0 else 0
+
+            # Secondary leads are next 2 specialties
+            for i, spec in enumerate(top_specialties[1:3]):  # Get 2nd and 3rd
+                spec_pct = (spec['count'] / total_count * 100) if total_count > 0 else 0
+                secondary_leads.append((spec['specialty'], spec_pct))
+
+        # PHASE 3: Extract anonymized complaint examples (for actionability)
+        example_complaints = []
+        example_count = 0
+
+        if df_hpeg is not None and 'dominant_topic' in df_hpeg.columns and 'Description' in df_hpeg.columns:
+            # Get complaints for this topic
+            topic_complaints = df_hpeg[df_hpeg['dominant_topic'] == topic['topic_id']]
+
+            # For CRITICAL/MONITOR topics, extract 2-3 examples
+            num_examples = 3 if priority_level == "CRITICAL" else (2 if priority_level == "MONITOR" else 0)
+
+            if len(topic_complaints) > 0 and num_examples > 0:
+                # Sample diverse examples (ensure variety if possible)
+                sample_size = min(num_examples, len(topic_complaints))
+                sampled = topic_complaints.sample(n=sample_size, random_state=42) if len(topic_complaints) > sample_size else topic_complaints
+
+                # Anonymize each example
+                for _, complaint_row in sampled.iterrows():
+                    description = complaint_row.get('Description', '')
+                    if description and isinstance(description, str):
+                        anonymized = anonymize_complaint_for_display(description, max_length=100)
+                        if anonymized:  # Only add if anonymization produced meaningful output
+                            example_complaints.append(anonymized)
+                            example_count += 1
+
         priorities.append({
             **topic,
             'hpeg_prevalence': hpeg_weight,
@@ -1279,7 +1450,12 @@ def calculate_topic_priorities(hpeg_performance: dict, trust_avg_dist: np.ndarra
             'priority_score': priority_score,
             'priority_level': priority_level,
             'priority_color': priority_color,
-            'recommendation': recommendation
+            'recommendation': recommendation,
+            'example_complaints': example_complaints,  # PHASE 3: Anonymized examples
+            'example_count': example_count,            # PHASE 3: Count for display logic
+            'primary_lead': primary_lead,              # PHASE 2: Who should own this
+            'primary_lead_pct': primary_lead_pct,      # PHASE 2: % of complaints from primary
+            'secondary_leads': secondary_leads         # PHASE 2: Other affected teams
         })
 
     # Sort by priority score descending
@@ -1700,11 +1876,12 @@ def main():
         # Analyze performance
         topic_perf = analyze_topic_performance(hpeg_df, hpeg_doc_topics, trust_topics)
 
-        # Calculate priorities
+        # Calculate priorities (ENHANCED: now includes anonymized examples)
         hpeg_dist = topic_models['trust_wide']['hpeg_distributions'][hpeg]
         priorities = calculate_topic_priorities(
             {'topic_distribution': hpeg_dist, 'topic_performance': topic_perf},
-            trust_avg_dist
+            trust_avg_dist,
+            df_hpeg=hpeg_df  # PHASE 3: Pass dataframe for example extraction
         )
 
         hpeg_topic_analysis[hpeg] = priorities
