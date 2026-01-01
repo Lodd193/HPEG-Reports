@@ -1152,12 +1152,18 @@ def filter_and_prepare_data(df: pd.DataFrame, periods: dict) -> tuple:
 
     return df_filtered, df_current, df_previous
 
-def perform_topic_modeling(df_current: pd.DataFrame) -> dict:
+def perform_topic_modeling(df_current: pd.DataFrame, df_previous: pd.DataFrame = None) -> dict:
     """
     Perform NMF topic modeling - both trust-wide and HPEG-specific.
 
+    PHASE 1 Enhancement: Now also processes previous period for trend calculation.
+
+    Args:
+        df_current: Current period complaints
+        df_previous: Previous period complaints (for trend comparison)
+
     Returns:
-        Dictionary with topic models and distributions
+        Dictionary with topic models and distributions (includes previous period doc_topics if provided)
     """
     print(f"\n{'='*70}")
     print("STEP 3: TOPIC MODELING (NMF)")
@@ -1331,7 +1337,7 @@ def analyze_topic_performance(df_current: pd.DataFrame, doc_topics: np.ndarray, 
 
     return topic_performance
 
-def calculate_topic_priorities(hpeg_performance: dict, trust_avg_dist: np.ndarray, df_hpeg: pd.DataFrame = None) -> list:
+def calculate_topic_priorities(hpeg_performance: dict, trust_avg_dist: np.ndarray, df_hpeg: pd.DataFrame = None, prev_topic_counts: dict = None) -> list:
     """
     Calculate priority scores for topics with actionable details (ENHANCED).
 
@@ -1440,6 +1446,32 @@ def calculate_topic_priorities(hpeg_performance: dict, trust_avg_dist: np.ndarra
                         if anonymized:  # Only add if anonymization produced meaningful output
                             example_complaints.append(anonymized)
                             example_count += 1
+
+
+        # PHASE 1: Calculate trend vs previous period
+        absolute_count = topic.get('complaint_count', 0)
+        previous_count = 0
+        trend_percentage = 0.0
+        trend_direction = '→'  # Default: stable
+        
+        if prev_topic_counts is not None:
+            previous_count = prev_topic_counts.get(topic['topic_id'], 0)
+            
+            if previous_count > 0:
+                # Calculate percentage change
+                trend_percentage = ((absolute_count - previous_count) / previous_count) * 100
+                
+                # Determine trend direction (>10% change is significant)
+                if trend_percentage > 10:
+                    trend_direction = '↑'
+                elif trend_percentage < -10:
+                    trend_direction = '↓'
+                else:
+                    trend_direction = '→'
+            elif absolute_count > 0:
+                # New topic (didn't exist in previous period)
+                trend_direction = '↑'
+                trend_percentage = 100.0  # Infinite growth, cap at 100%
 
         priorities.append({
             **topic,
@@ -1845,7 +1877,7 @@ def main():
     df_filtered, df_current, df_previous = filter_and_prepare_data(df, periods)
 
     # Topic modeling
-    topic_models = perform_topic_modeling(df_current)
+    topic_models = perform_topic_modeling(df_current, df_previous)
 
     # Topic performance analysis (links topics to actionable insights)
     print(f"\n{'='*70}")
