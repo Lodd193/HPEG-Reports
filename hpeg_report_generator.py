@@ -1627,26 +1627,86 @@ def create_slide_6_risk_dashboard(prs, hpeg_name, metrics):
                 font_size=11, color_rgb=NHS_COLORS_RGB['nhs_mid_grey'])
 
 def create_slide_7_demographics(prs, hpeg_name, metrics, demographic_findings):
-    """Slide 7: Demographic Insights (conditional)."""
-    # Only create if there are findings
-    if len(demographic_findings) == 0:
-        return  # Skip this slide
-
+    """Slide 16: Demographics Overview (Gender & Ethnicity)."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    add_title_bar(slide, hpeg_name, "Demographic Insights")
+    add_title_bar(slide, hpeg_name, "Demographics Overview")
 
-    # Display findings
-    y_pos = 1.5
-    add_text_box(slide, "Statistically Significant Findings (p < 0.05):",
-                left=0.5, top=y_pos, width=12, height=0.5,
-                font_size=14, bold=True, color_rgb=NHS_COLORS_RGB['nhs_dark_blue'])
+    # Get current period dataframe
+    df_current = metrics.get('dataframe_current')
 
-    y_pos += 0.7
-    for finding in demographic_findings[:5]:  # Show top 5
-        text = f"• {finding['interpretation']}"
-        add_text_box(slide, text, left=1, top=y_pos, width=11, height=0.4,
-                    font_size=11, color_rgb=NHS_COLORS_RGB['nhs_black'])
-        y_pos += 0.5
+    if df_current is None or len(df_current) == 0:
+        # No data - show message
+        add_text_box(slide, "No demographic data available for this period",
+                    left=2, top=3, width=10, height=1,
+                    font_size=14, color_rgb=NHS_COLORS_RGB['nhs_mid_grey'])
+        return
+
+    # Filter for this HPEG only
+    total_cases = len(df_current)
+
+    # Create two columns: Gender | Ethnicity
+    col_width = 5.5
+    col_height = 5
+
+    # ==== GENDER BREAKDOWN ====
+    if 'Gender' in df_current.columns:
+        gender_counts = df_current['Gender'].value_counts()
+
+        # Gender header
+        add_text_box(slide, "Gender Breakdown",
+                    left=0.8, top=1.3, width=col_width, height=0.4,
+                    font_size=14, bold=True, color_rgb=NHS_COLORS_RGB['nhs_blue'])
+
+        y_pos = 1.8
+        for gender, count in gender_counts.head(5).items():
+            pct = (count / total_cases * 100) if total_cases > 0 else 0
+            text = f"{gender}: {count} ({pct:.1f}%)"
+            add_text_box(slide, text,
+                        left=1, top=y_pos, width=col_width - 0.2, height=0.3,
+                        font_size=12, color_rgb=NHS_COLORS_RGB['nhs_black'])
+            y_pos += 0.4
+
+    # ==== ETHNICITY BREAKDOWN ====
+    if 'Ethnicity' in df_current.columns:
+        ethnicity_counts = df_current['Ethnicity'].value_counts()
+
+        # Ethnicity header
+        add_text_box(slide, "Ethnicity Breakdown (Top 10)",
+                    left=0.8 + col_width, top=1.3, width=col_width, height=0.4,
+                    font_size=14, bold=True, color_rgb=NHS_COLORS_RGB['nhs_blue'])
+
+        y_pos = 1.8
+        for ethnicity, count in ethnicity_counts.head(10).items():
+            pct = (count / total_cases * 100) if total_cases > 0 else 0
+            # Truncate long ethnicity names
+            eth_display = ethnicity if len(ethnicity) < 30 else ethnicity[:27] + '...'
+            text = f"{eth_display}: {count} ({pct:.1f}%)"
+            add_text_box(slide, text,
+                        left=0.8 + col_width + 0.2, top=y_pos, width=col_width - 0.2, height=0.3,
+                        font_size=11, color_rgb=NHS_COLORS_RGB['nhs_black'])
+            y_pos += 0.35
+
+    # Footer note
+    add_text_box(slide,
+                f"Current Period: {total_cases} total cases  |  Note: 12-month trend comparison requires additional data processing. Age data not available in current dataset.",
+                left=0.8, top=6.5, width=11.7, height=0.5,
+                font_size=9, color_rgb=NHS_COLORS_RGB['nhs_mid_grey'],
+                alignment=PP_ALIGN.CENTER)
+
+    # Show statistical findings if available (below demographics)
+    if len(demographic_findings) > 0:
+        add_text_box(slide, "Statistical Findings:",
+                    left=0.8, top=5, width=11.7, height=0.3,
+                    font_size=11, bold=True, color_rgb=NHS_COLORS_RGB['nhs_dark_blue'])
+
+        y_pos = 5.4
+        for finding in demographic_findings[:2]:  # Show top 2 only
+            text = f"• {finding['interpretation']}"
+            add_text_box(slide, text,
+                        left=1, top=y_pos, width=11, height=0.3,
+                        font_size=9, color_rgb=NHS_COLORS_RGB['nhs_black'])
+            y_pos += 0.35
+
 
 def create_slide_8_oldest_cases(prs, hpeg_name):
     """Slide 8: 10 Oldest Cases (blank template)."""
@@ -1675,6 +1735,15 @@ def create_slide_9_actions_status(prs, hpeg_name):
     """Slide 9: Actions Status (blank template)."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     add_title_bar(slide, hpeg_name, "Actions Status")
+
+    # Add explicit instruction at top
+    instruction = slide.shapes.add_textbox(Inches(0.5), Inches(1.2), Inches(12), Inches(0.5))
+    instruction_frame = instruction.text_frame
+    p = instruction_frame.paragraphs[0]
+    p.text = "Insert the Actions data for this HPEG"
+    p.font.size = Pt(16)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(*NHS_COLORS_RGB['nhs_pink'])
 
     # Three sections with placeholder text
     sections = [
@@ -1707,6 +1776,15 @@ def create_slide_10_current_performance(prs, hpeg_name):
     """Slide 10: Current Performance (blank template)."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     add_title_bar(slide, hpeg_name, "Current Performance & Key Achievements")
+
+    # Add explicit instruction at top
+    instruction = slide.shapes.add_textbox(Inches(0.5), Inches(1.2), Inches(12), Inches(0.5))
+    instruction_frame = instruction.text_frame
+    p = instruction_frame.paragraphs[0]
+    p.text = "Insert most recent DoNs table for this HPEG"
+    p.font.size = Pt(16)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(*NHS_COLORS_RGB['nhs_pink'])
 
     # Two sections
     sections = [
@@ -2090,7 +2168,7 @@ def create_slide_12month_specialty_trends(prs, hpeg_name, trends_12month, hpeg_s
 def create_slide_resolution_complexity_distribution(prs, hpeg_name, metrics, temp_dir):
     """NEW Slide: Resolution Time Distribution by Complexity."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    add_title_bar(slide, hpeg_name, "Resolution Time by Complexity Level")
+    add_title_bar(slide, hpeg_name, "Resolution Time by Complexity Level (Closed Cases Only)")
 
     # Get current period months from dataframe for time period label
     df_current = metrics.get('dataframe_current')
@@ -2399,7 +2477,7 @@ def generate_hpeg_report(hpeg_name, data, temp_dir):
 
     # EXISTING SLIDES (renumbered)
     create_slide_5_performance_metrics(prs, hpeg_name, metrics, temp_dir)  # Slide 14: Complexity Donut
-    create_slide_6_risk_dashboard(prs, hpeg_name, metrics)  # Slide 15: Risk Dashboard
+    # create_slide_6_risk_dashboard(prs, hpeg_name, metrics)  # Slide 15: Risk Dashboard (REMOVED)
     create_slide_7_demographics(prs, hpeg_name, metrics, demographic_findings)  # Slide 16: Demographics (conditional)
     create_slide_8_oldest_cases(prs, hpeg_name)  # Slide 17: Oldest Cases (blank)
     create_slide_9_actions_status(prs, hpeg_name)  # Slide 18: Actions (blank)
