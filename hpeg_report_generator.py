@@ -1626,8 +1626,8 @@ def create_slide_6_risk_dashboard(prs, hpeg_name, metrics):
                 left=0.5, top=4, width=12, height=1,
                 font_size=11, color_rgb=NHS_COLORS_RGB['nhs_mid_grey'])
 
-def create_slide_7_demographics(prs, hpeg_name, metrics, demographic_findings):
-    """Slide 16: Demographics Overview (Gender & Ethnicity)."""
+def create_slide_7_demographics(prs, hpeg_name, metrics, demographic_findings, temp_dir):
+    """Slide 15: Demographics Overview (Gender & Ethnicity) - CHART VERSION."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     add_title_bar(slide, hpeg_name, "Demographics Overview")
 
@@ -1641,71 +1641,126 @@ def create_slide_7_demographics(prs, hpeg_name, metrics, demographic_findings):
                     font_size=14, color_rgb=NHS_COLORS_RGB['nhs_mid_grey'])
         return
 
-    # Filter for this HPEG only
     total_cases = len(df_current)
 
-    # Create two columns: Gender | Ethnicity
-    col_width = 5.5
-    col_height = 5
-
-    # ==== GENDER BREAKDOWN ====
+    # ==== CREATE GENDER PIE CHART ====
     if 'Gender' in df_current.columns:
         gender_counts = df_current['Gender'].value_counts()
 
-        # Gender header
-        add_text_box(slide, "Gender Breakdown",
-                    left=0.8, top=1.3, width=col_width, height=0.4,
-                    font_size=14, bold=True, color_rgb=NHS_COLORS_RGB['nhs_blue'])
+        fig, ax = plt.subplots(figsize=(6, 5))
+        fig.patch.set_facecolor('white')
 
-        y_pos = 1.8
-        for gender, count in gender_counts.head(5).items():
-            pct = (count / total_cases * 100) if total_cases > 0 else 0
-            text = f"{gender}: {count} ({pct:.1f}%)"
-            add_text_box(slide, text,
-                        left=1, top=y_pos, width=col_width - 0.2, height=0.3,
-                        font_size=12, color_rgb=NHS_COLORS_RGB['nhs_black'])
-            y_pos += 0.4
+        # NHS color scheme for gender
+        colors = [NHS_COLORS_HEX['nhs_blue'], NHS_COLORS_HEX['nhs_pink'],
+                  NHS_COLORS_HEX['nhs_warm_yellow']][:len(gender_counts)]
 
-    # ==== ETHNICITY BREAKDOWN ====
+        # Create pie chart
+        wedges, texts, autotexts = ax.pie(
+            gender_counts.values,
+            labels=gender_counts.index,
+            autopct='%1.1f%%',
+            startangle=90,
+            colors=colors,
+            textprops={'fontsize': 12, 'fontweight': 'bold'}
+        )
+
+        # Make percentage text white and bold
+        for autotext in autotexts:
+            autotext.set_color('white')
+            autotext.set_fontsize(14)
+            autotext.set_fontweight('bold')
+
+        # Make labels larger
+        for text in texts:
+            text.set_fontsize(13)
+            text.set_fontweight('bold')
+
+        ax.set_title('Gender Distribution', fontsize=14, fontweight='bold',
+                    color=NHS_COLORS_HEX['nhs_dark_blue'], pad=20)
+
+        # Add count legend below
+        legend_labels = [f"{gender}: {count}" for gender, count in gender_counts.items()]
+        ax.legend(legend_labels, loc='upper center', bbox_to_anchor=(0.5, -0.05),
+                 ncol=3, fontsize=10, frameon=False)
+
+        plt.tight_layout()
+
+        # Save and add to slide
+        gender_path = os.path.join(temp_dir, f'{hpeg_name}_gender.png')
+        plt.savefig(gender_path, dpi=300, bbox_inches='tight', facecolor='white')
+        plt.close(fig)
+
+        add_image_to_slide(slide, gender_path, left=0.5, top=1.3, width=6)
+
+    # ==== CREATE ETHNICITY BAR CHART ====
     if 'Ethnicity' in df_current.columns:
-        ethnicity_counts = df_current['Ethnicity'].value_counts()
+        ethnicity_counts = df_current['Ethnicity'].value_counts().head(10)
 
-        # Ethnicity header
-        add_text_box(slide, "Ethnicity Breakdown (Top 10)",
-                    left=0.8 + col_width, top=1.3, width=col_width, height=0.4,
-                    font_size=14, bold=True, color_rgb=NHS_COLORS_RGB['nhs_blue'])
+        fig, ax = plt.subplots(figsize=(6, 5))
+        fig.patch.set_facecolor('white')
 
-        y_pos = 1.8
-        for ethnicity, count in ethnicity_counts.head(10).items():
-            pct = (count / total_cases * 100) if total_cases > 0 else 0
-            # Truncate long ethnicity names
-            eth_display = ethnicity if len(ethnicity) < 30 else ethnicity[:27] + '...'
-            text = f"{eth_display}: {count} ({pct:.1f}%)"
-            add_text_box(slide, text,
-                        left=0.8 + col_width + 0.2, top=y_pos, width=col_width - 0.2, height=0.3,
-                        font_size=11, color_rgb=NHS_COLORS_RGB['nhs_black'])
-            y_pos += 0.35
+        # Create horizontal bar chart
+        y_pos = np.arange(len(ethnicity_counts))
+
+        # Reverse order so highest is at top
+        ethnicity_counts_reversed = ethnicity_counts[::-1]
+
+        bars = ax.barh(y_pos, ethnicity_counts_reversed.values,
+                      color=NHS_COLORS_HEX['nhs_blue'], edgecolor=NHS_COLORS_HEX['nhs_dark_blue'],
+                      linewidth=1.5)
+
+        # Truncate long ethnicity labels
+        labels = [label if len(label) < 25 else label[:22] + '...'
+                 for label in ethnicity_counts_reversed.index]
+        ax.set_yticks(y_pos)
+        ax.set_yticklabels(labels, fontsize=10)
+
+        ax.set_xlabel('Number of Cases', fontsize=11, fontweight='bold',
+                     color=NHS_COLORS_HEX['nhs_dark_grey'])
+        ax.set_title('Ethnicity Distribution (Top 10)', fontsize=14, fontweight='bold',
+                    color=NHS_COLORS_HEX['nhs_dark_blue'], pad=15)
+
+        # Add value labels on bars
+        for i, (bar, value) in enumerate(zip(bars, ethnicity_counts_reversed.values)):
+            pct = (value / total_cases * 100) if total_cases > 0 else 0
+            ax.text(bar.get_width() + 1, bar.get_y() + bar.get_height()/2,
+                   f'{value} ({pct:.1f}%)',
+                   va='center', fontsize=9, color=NHS_COLORS_HEX['nhs_dark_grey'])
+
+        ax.grid(axis='x', alpha=0.3, linestyle='--')
+        ax.set_axisbelow(True)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+
+        plt.tight_layout()
+
+        # Save and add to slide
+        ethnicity_path = os.path.join(temp_dir, f'{hpeg_name}_ethnicity.png')
+        plt.savefig(ethnicity_path, dpi=300, bbox_inches='tight', facecolor='white')
+        plt.close(fig)
+
+        add_image_to_slide(slide, ethnicity_path, left=7, top=1.3, width=6)
 
     # Footer note
     add_text_box(slide,
-                f"Current Period: {total_cases} total cases  |  Note: 12-month trend comparison requires additional data processing. Age data not available in current dataset.",
+                f"Current Period: {total_cases} total cases  |  Note: Age data not available in current dataset.",
                 left=0.8, top=6.5, width=11.7, height=0.5,
                 font_size=9, color_rgb=NHS_COLORS_RGB['nhs_mid_grey'],
                 alignment=PP_ALIGN.CENTER)
 
-    # Show statistical findings if available (below demographics)
+    # Show statistical findings if available (at bottom)
     if len(demographic_findings) > 0:
         add_text_box(slide, "Statistical Findings:",
-                    left=0.8, top=5, width=11.7, height=0.3,
+                    left=0.8, top=5.8, width=11.7, height=0.3,
                     font_size=11, bold=True, color_rgb=NHS_COLORS_RGB['nhs_dark_blue'])
 
-        y_pos = 5.4
+        y_pos = 6.1
         for finding in demographic_findings[:2]:  # Show top 2 only
             text = f"• {finding['interpretation']}"
             add_text_box(slide, text,
-                        left=1, top=y_pos, width=11, height=0.3,
+                        left=1, top=y_pos, width=11, height=0.25,
                         font_size=9, color_rgb=NHS_COLORS_RGB['nhs_black'])
-            y_pos += 0.35
+            y_pos += 0.3
 
 
 def create_slide_8_oldest_cases(prs, hpeg_name):
@@ -2478,7 +2533,7 @@ def generate_hpeg_report(hpeg_name, data, temp_dir):
     # EXISTING SLIDES (renumbered)
     create_slide_5_performance_metrics(prs, hpeg_name, metrics, temp_dir)  # Slide 14: Complexity Donut
     # create_slide_6_risk_dashboard(prs, hpeg_name, metrics)  # Slide 15: Risk Dashboard (REMOVED)
-    create_slide_7_demographics(prs, hpeg_name, metrics, demographic_findings)  # Slide 16: Demographics (conditional)
+    create_slide_7_demographics(prs, hpeg_name, metrics, demographic_findings, temp_dir)  # Slide 15: Demographics (charts)
     create_slide_8_oldest_cases(prs, hpeg_name)  # Slide 17: Oldest Cases (blank)
     create_slide_9_actions_status(prs, hpeg_name)  # Slide 18: Actions (blank)
     create_slide_10_current_performance(prs, hpeg_name)  # Slide 19: Performance (blank)
