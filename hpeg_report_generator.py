@@ -587,19 +587,13 @@ def create_topic_analysis_chart(topics, hpeg_dist, trust_avg_dist):
 
 def create_topic_intelligence_chart(topic_priorities):
     """
-    Create ENHANCED strategic Topic Intelligence chart with actionable insights.
+    Create strategic Topic Intelligence chart with actionable insights.
 
-    PHASES 1-4 Integration:
-    - Phase 1: Trend indicators (complaint counts, up/down/stable arrows)
-    - Phase 2: Team ownership (primary + secondary leads)
-    - Phase 3: Anonymized examples (real complaint patterns)
-    - Phase 4: Action plans (specific timelines and steps)
-
-    4-Column Layout:
-    1. Priority (Enhanced): Level, score, trend, complaint count
-    2. Theme & Context: Label, keywords, prevalence, resolution
-    3. Root Cause: Team ownership, anonymized examples
-    4. Action Plan: Timeline, specific steps, success metric
+    4-Column Layout (FIXED spacing and readability):
+    1. Priority: Level, score, trend, count
+    2. Theme: Label, keywords
+    3. Root Cause: Lead contact, example
+    4. Suggestions: Key actions
 
     Args:
         topic_priorities: List of enhanced topic priority dicts
@@ -610,7 +604,7 @@ def create_topic_intelligence_chart(topic_priorities):
     import matplotlib.pyplot as plt
     import numpy as np
 
-    # NHS Colors (assuming these are defined globally)
+    # NHS Colors
     NHS_COLORS_HEX = {
         'nhs_blue': '#005EB8',
         'nhs_dark_blue': '#003087',
@@ -622,164 +616,147 @@ def create_topic_intelligence_chart(topic_priorities):
         'nhs_pink': '#AE2573'
     }
 
-    fig = plt.figure(figsize=(14, 7))  # Wider for 4 columns
+    fig = plt.figure(figsize=(14, 7))
     fig.patch.set_facecolor('white')
 
-    # Create grid: 4 columns with adjusted spacing
-    gs = fig.add_gridspec(6, 4, hspace=0.4, wspace=0.12,
-                          left=0.05, right=0.98, top=0.90, bottom=0.08)
-
     # Title
-    fig.text(0.5, 0.96, 'Topic Intelligence & Priority Action Plans',
+    fig.text(0.5, 0.96, 'Topic Intelligence & Priority Themes',
              ha='center', fontsize=16, fontweight='bold',
              color=NHS_COLORS_HEX['nhs_dark_blue'])
 
-    # Column headers
-    fig.text(0.10, 0.90, 'Priority & Trend', ha='center', fontsize=10, fontweight='bold',
+    # Column headers - FIXED x-positions to prevent overlap
+    fig.text(0.10, 0.90, 'Priority', ha='center', fontsize=10, fontweight='bold',
              color=NHS_COLORS_HEX['nhs_dark_grey'])
-    fig.text(0.28, 0.90, 'Theme & Context', ha='center', fontsize=10, fontweight='bold',
+    fig.text(0.27, 0.90, 'Theme', ha='center', fontsize=10, fontweight='bold',
              color=NHS_COLORS_HEX['nhs_dark_grey'])
-    fig.text(0.50, 0.90, 'Root Cause', ha='center', fontsize=10, fontweight='bold',
+    fig.text(0.46, 0.90, 'Root Cause', ha='center', fontsize=10, fontweight='bold',
              color=NHS_COLORS_HEX['nhs_dark_grey'])
-    fig.text(0.75, 0.90, 'Action Plan', ha='center', fontsize=10, fontweight='bold',
+    fig.text(0.72, 0.90, 'Suggestions', ha='center', fontsize=10, fontweight='bold',
              color=NHS_COLORS_HEX['nhs_dark_grey'])
 
-    # Take top 5 priorities
-    sorted_topics = sorted(topic_priorities, key=lambda x: x['priority_score'], reverse=True)[:5]
+    # Show top 4 priorities (not 5) for better spacing
+    sorted_topics = sorted(topic_priorities, key=lambda x: x['priority_score'], reverse=True)[:4]
 
-    # Y-positions for 5 topics
-    y_positions = [0.75, 0.59, 0.43, 0.27, 0.11]
-    row_height = 0.14
+    # Y-positions for 4 topics - more vertical space
+    y_positions = [0.75, 0.56, 0.37, 0.18]
 
     for idx, (topic, y_pos) in enumerate(zip(sorted_topics, y_positions)):
-        # ==== COLUMN 1: PRIORITY & TREND ====
+        # ==== COLUMN 1: PRIORITY (x: 0.05-0.15) ====
         priority_level = topic['priority_level']
         priority_color = topic['priority_color']
         priority_score = topic['priority_score']
-
-        # Phase 1 data
         trend_direction = topic.get('trend_direction', '→')
         absolute_count = topic.get('absolute_count', 0)
         trend_percentage = topic.get('trend_percentage', 0)
 
         # Priority box
-        fig.patches.extend([plt.Rectangle((0.05, y_pos), 0.10, 0.09,
+        fig.patches.extend([plt.Rectangle((0.05, y_pos), 0.10, 0.11,
                                          facecolor=priority_color,
                                          edgecolor=NHS_COLORS_HEX['nhs_dark_grey'],
                                          linewidth=2, transform=fig.transFigure, zorder=2)])
 
-        # Priority level + trend arrow
-        fig.text(0.10, y_pos + 0.07, f"{priority_level} {trend_direction}",
+        # Priority level + trend
+        fig.text(0.10, y_pos + 0.085, f"{priority_level} {trend_direction}",
                 ha='center', va='center', fontsize=10, fontweight='bold', color='white')
 
         # Score
-        fig.text(0.10, y_pos + 0.04, f"Score: {priority_score:.2f}",
+        fig.text(0.10, y_pos + 0.055, f"Score: {priority_score:.2f}",
+                ha='center', va='center', fontsize=8, color='white')
+
+        # Complaint count
+        fig.text(0.10, y_pos + 0.03, f"{absolute_count} cases",
                 ha='center', va='center', fontsize=7, color='white')
 
-        # Complaint count + trend %
-        trend_sign = '+' if trend_percentage >= 0 else ''
-        fig.text(0.10, y_pos + 0.01, f"{absolute_count} complaints",
-                ha='center', va='center', fontsize=7, color='white')
+        # Trend %
         if trend_percentage != 0:
-            fig.text(0.10, y_pos - 0.01, f"({trend_sign}{trend_percentage:.0f}%)",
-                    ha='center', va='center', fontsize=6, color='white', style='italic')
+            trend_sign = '+' if trend_percentage >= 0 else ''
+            fig.text(0.10, y_pos + 0.005, f"({trend_sign}{trend_percentage:.0f}%)",
+                    ha='center', va='center', fontsize=7, color='white', style='italic')
 
-        # ==== COLUMN 2: THEME & CONTEXT ====
+        # ==== COLUMN 2: THEME (x: 0.18-0.35) ====
         topic_label = topic['topic_label']
-        keywords = ', '.join(topic['keywords'][:4])  # Top 4 keywords
+        keywords = ', '.join(topic['keywords'][:3])  # Top 3 keywords only
         prevalence = topic.get('prevalence_pct', 0)
-        median_days = topic.get('median_resolution_days', 0)
 
-        # Topic label
-        fig.text(0.17, y_pos + 0.08, topic_label,
-                ha='left', va='top', fontsize=9, fontweight='bold',
-                color=NHS_COLORS_HEX['nhs_blue'], wrap=True)
+        # Topic label (truncate if very long)
+        label_display = topic_label if len(topic_label) < 30 else topic_label[:27] + '...'
+        fig.text(0.18, y_pos + 0.10, label_display,
+                ha='left', va='top', fontsize=10, fontweight='bold',
+                color=NHS_COLORS_HEX['nhs_blue'])
 
-        # Keywords
-        fig.text(0.17, y_pos + 0.05, f"Keywords: {keywords}",
-                ha='left', va='top', fontsize=7, style='italic',
+        # Keywords (shortened)
+        keywords_short = keywords if len(keywords) < 35 else keywords[:32] + '...'
+        fig.text(0.18, y_pos + 0.065, keywords_short,
+                ha='left', va='top', fontsize=8, style='italic',
                 color=NHS_COLORS_HEX['nhs_mid_grey'])
 
-        # Metrics
-        fig.text(0.17, y_pos + 0.02, f"Prevalence: {prevalence:.1f}%",
-                ha='left', va='top', fontsize=7, color=NHS_COLORS_HEX['nhs_dark_grey'])
-        fig.text(0.17, y_pos - 0.01, f"Median Res: {median_days:.0f} days",
-                ha='left', va='top', fontsize=7, color=NHS_COLORS_HEX['nhs_dark_grey'])
+        # Prevalence only
+        fig.text(0.18, y_pos + 0.03, f"{prevalence:.1f}% of complaints",
+                ha='left', va='top', fontsize=8, color=NHS_COLORS_HEX['nhs_dark_grey'])
 
-        # ==== COLUMN 3: ROOT CAUSE ====
-        # Phase 2: Team ownership
+        # ==== COLUMN 3: ROOT CAUSE (x: 0.37-0.56) ====
         primary_lead = topic.get('primary_lead', 'HPEG Lead')
         primary_pct = topic.get('primary_lead_pct', 0)
-        secondary_leads = topic.get('secondary_leads', [])
+        example_complaints = topic.get('example_complaints', [])
 
         # Lead contact
-        fig.text(0.38, y_pos + 0.08, f"Lead: {primary_lead}",
-                ha='left', va='top', fontsize=8, fontweight='bold',
+        fig.text(0.37, y_pos + 0.10, f"Contact: {primary_lead}",
+                ha='left', va='top', fontsize=9, fontweight='bold',
                 color=NHS_COLORS_HEX['nhs_dark_blue'])
+
         if primary_pct > 0:
-            fig.text(0.38, y_pos + 0.05, f"({primary_pct:.0f}% of complaints)",
-                    ha='left', va='top', fontsize=6, color=NHS_COLORS_HEX['nhs_mid_grey'])
+            fig.text(0.37, y_pos + 0.07, f"({primary_pct:.0f}% of cases)",
+                    ha='left', va='top', fontsize=7, color=NHS_COLORS_HEX['nhs_mid_grey'])
 
-        # Secondary teams
-        if len(secondary_leads) > 0:
-            other_teams = ', '.join([f"{team[0]}" for team in secondary_leads[:2]])
-            fig.text(0.38, y_pos + 0.03, f"Also: {other_teams}",
-                    ha='left', va='top', fontsize=6, color=NHS_COLORS_HEX['nhs_mid_grey'])
-
-        # Phase 3: Anonymized examples (show 1-2)
-        example_complaints = topic.get('example_complaints', [])
+        # Show 1 example only (shortened for space)
         if len(example_complaints) > 0:
-            fig.text(0.38, y_pos, "Examples:",
-                    ha='left', va='top', fontsize=7, fontweight='bold',
+            fig.text(0.37, y_pos + 0.04, "Example:",
+                    ha='left', va='top', fontsize=8, fontweight='bold',
                     color=NHS_COLORS_HEX['nhs_dark_grey'])
 
-            for ex_idx, example in enumerate(example_complaints[:2]):  # Max 2 examples
-                # Truncate example if too long
-                example_short = example[:50] + '...' if len(example) > 50 else example
-                fig.text(0.38, y_pos - 0.02 - (ex_idx * 0.02), f"- {example_short}",
-                        ha='left', va='top', fontsize=6,
-                        color=NHS_COLORS_HEX['nhs_dark_grey'])
+            example = example_complaints[0]
+            # Truncate to 45 chars
+            example_short = example[:45] + '...' if len(example) > 45 else example
+            fig.text(0.37, y_pos + 0.01, f"{example_short}",
+                    ha='left', va='top', fontsize=7,
+                    color=NHS_COLORS_HEX['nhs_dark_grey'])
 
-        # ==== COLUMN 4: ACTION PLAN ====
-        # Phase 4: Action timeline and steps
+        # ==== COLUMN 4: SUGGESTIONS (x: 0.58-0.95) ====
         action_timeline = topic.get('action_timeline', 'Review')
         action_steps = topic.get('action_steps', [])
         success_metric = topic.get('success_metric', '')
 
-        # Timeline header
-        timeline_text = f"Timeline: {action_timeline}"
-        fig.text(0.60, y_pos + 0.08, timeline_text,
-                ha='left', va='top', fontsize=8, fontweight='bold',
+        # Timeline
+        fig.text(0.58, y_pos + 0.10, f"Timeline: {action_timeline}",
+                ha='left', va='top', fontsize=9, fontweight='bold',
                 color=NHS_COLORS_HEX['nhs_dark_blue'])
 
-        # Action steps (show first 3)
-        step_y = y_pos + 0.05
-        for step_idx, step in enumerate(action_steps[:3]):
-            # Truncate step if too long
-            step_short = step[:45] + '...' if len(step) > 45 else step
-            fig.text(0.60, step_y - (step_idx * 0.02), f"- {step_short}",
-                    ha='left', va='top', fontsize=6,
+        # Show first 2 action steps (full text, not truncated)
+        step_y = y_pos + 0.07
+        for step_idx, step in enumerate(action_steps[:2]):
+            fig.text(0.58, step_y - (step_idx * 0.03), f"• {step}",
+                    ha='left', va='top', fontsize=8,
                     color=NHS_COLORS_HEX['nhs_dark_grey'])
 
-        # Success metric
-        if success_metric:
-            metric_short = success_metric[:40] + '...' if len(success_metric) > 40 else success_metric
-            fig.text(0.60, y_pos - 0.01, f"Target: {metric_short}",
-                    ha='left', va='top', fontsize=6, style='italic',
+        # Success metric (if space allows)
+        if success_metric and len(action_steps) <= 2:
+            fig.text(0.58, y_pos + 0.01, f"Target: {success_metric}",
+                    ha='left', va='top', fontsize=7, style='italic',
                     color=NHS_COLORS_HEX['nhs_pink'])
 
-        # Separator line between topics (except last)
+        # Separator line between topics
         if idx < len(sorted_topics) - 1:
-            fig.patches.extend([plt.Rectangle((0.05, y_pos - 0.03), 0.93, 0.001,
+            fig.patches.extend([plt.Rectangle((0.05, y_pos - 0.02), 0.90, 0.001,
                                              facecolor=NHS_COLORS_HEX['nhs_pale_grey'],
                                              transform=fig.transFigure, zorder=1)])
 
-    # Footer notes
+    # Footer
     fig.text(0.5, 0.03,
-             'Priority Score = (Deviation × 0.5) + (Resolution Time × 0.5)  |  Trend: ↑ Growing  ↓ Declining  → Stable  |  Examples anonymized per NHS data governance',
-             ha='center', fontsize=7, style='italic', color=NHS_COLORS_HEX['nhs_mid_grey'])
+             'Priority Score = (Deviation × 0.5) + (Resolution × 0.5)  |  Trend: ↑ Growing  ↓ Declining  → Stable',
+             ha='center', fontsize=8, style='italic', color=NHS_COLORS_HEX['nhs_mid_grey'])
 
     return fig
+
 
 def create_deadline_compliance_chart(df_current):
     """Create deadline compliance chart."""
